@@ -1,12 +1,24 @@
-require('dotenv').config();
+// src/server.js
 const app = require('./app');
+const sequelize = require('./config/database');
 
 const PORT = process.env.PORT || 3000;
 
-// Por ahora comentamos la DB para que no de error hasta que configures Sequelize
-// const { sequelize } = require('./models');
+const startServer = async () => {
+  try {
+    await sequelize.authenticate();
+    console.log('✓ Conexión a PostgreSQL exitosa');
+    
+    await sequelize.sync({ alter: true });
+    console.log('✓ Modelos sincronizados');
+    
+    app.listen(PORT, () => {
+      console.log(`✓ Servidor corriendo en http://localhost:${PORT}`);
+    });
+  } catch (error) {
+    console.error('✗ Error al iniciar servidor:', error);
+    process.exit(1);
+  }
+};
 
-app.listen(PORT, () => {
-    console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
-    console.log(`📜 Documentación en http://localhost:${PORT}/api-docs (próximamente)`);
-});
+startServer();

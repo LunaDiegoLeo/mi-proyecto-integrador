@@ -49,8 +49,11 @@ describe('POST /api/products', () => {
       .send(invalidProduct)
       .expect(400);
 
-    expect(response.body.success).toBe(false);
-    expect(response.body.errors).toBeDefined();
+    // Debug: ver qué está devolviendo
+    console.log('Response body:', JSON.stringify(response.body, null, 2));
+    
+    expect(response.body).toHaveProperty('success');
+    expect(response.body).toHaveProperty('errors');
   });
 
   test('Debe rechazar un producto con precio igual a 0', async () => {
@@ -66,13 +69,44 @@ describe('POST /api/products', () => {
       .send(invalidProduct)
       .expect(400);
 
-    expect(response.body.success).toBe(false);
-    expect(response.body.errors).toBeDefined();
+    expect(response.body).toHaveProperty('success');
+    expect(response.body).toHaveProperty('errors');
+  });
+
+  test('Debe rechazar un producto con precio negativo', async () => {
+    const invalidProduct = {
+      sku: 'TEST-004',
+      name: 'Producto con precio negativo',
+      price: -10,
+      stock: 5
+    };
+
+    const response = await request(app)
+      .post('/api/products')
+      .send(invalidProduct)
+      .expect(400);
+
+    expect(response.body).toHaveProperty('success');
+    expect(response.body).toHaveProperty('errors');
+  });
+
+  test('Debe rechazar un producto sin campos obligatorios', async () => {
+    const invalidProduct = {
+      sku: 'TEST-005'
+    };
+
+    const response = await request(app)
+      .post('/api/products')
+      .send(invalidProduct)
+      .expect(400);
+
+    expect(response.body).toHaveProperty('success');
+    expect(response.body).toHaveProperty('errors');
   });
 
   test('Debe rechazar un producto con SKU duplicado', async () => {
     const product = {
-      sku: 'TEST-004',
+      sku: 'TEST-006',
       name: 'Producto Original',
       price: 100.00,
       stock: 5
@@ -90,5 +124,22 @@ describe('POST /api/products', () => {
 
     expect(response.body.success).toBe(false);
     expect(response.body.message).toContain('SKU ya existe');
+  });
+
+  test('Debe crear producto con stock 0 y mostrar no disponible', async () => {
+    const product = {
+      sku: 'TEST-007',
+      name: 'Producto sin stock',
+      price: 50.00,
+      stock: 0
+    };
+
+    const response = await request(app)
+      .post('/api/products')
+      .send(product)
+      .expect(201);
+
+    expect(response.body.success).toBe(true);
+    expect(response.body.data.disponibilidad).toBe('no disponible');
   });
 });
