@@ -70,25 +70,28 @@ const ProductForm = () => {
         stock: parseInt(formData.stock),
       };
       
-      await api.post('/', payload);
-      alert('Producto registrado exitosamente');
+      await api.post('/products', payload);
+      alert('✓ Producto registrado exitosamente');
       navigate('/');
     } catch (error) {
+      console.error('Error:', error);
       if (error.response) {
         if (error.response.status === 409) {
-          alert('Error: El SKU ya existe en el sistema');
+          alert('✗ Error: El SKU ya existe en el sistema');
         } else if (error.response.status === 400) {
           const messages = error.response.data.errors || error.response.data.message;
           if (Array.isArray(messages)) {
-            alert(`Error de validación:\n${messages.join('\n')}`);
+            alert(`✗ Error de validación:\n${messages.join('\n')}`);
           } else {
-            alert(`Error: ${messages || 'Datos inválidos'}`);
+            alert(`✗ Error: ${messages || 'Datos inválidos'}`);
           }
         } else {
-          alert(`Error: ${error.response.data.message || 'No se pudo registrar el producto'}`);
+          alert(`✗ Error: ${error.response.data.message || 'No se pudo registrar el producto'}`);
         }
+      } else if (error.request) {
+        alert('✗ Error de conexión: No se puede conectar al servidor backend en http://localhost:3000');
       } else {
-        alert('Error de conexión con el servidor');
+        alert(`✗ Error: ${error.message}`);
       }
     } finally {
       setIsSubmitting(false);
@@ -98,6 +101,10 @@ const ProductForm = () => {
   return (
     <div style={styles.container}>
       <div style={styles.card}>
+        <button onClick={() => navigate('/')} style={styles.backButton}>
+          ← Volver al inicio
+        </button>
+        
         <h1 style={styles.title}>Registrar Nuevo Producto</h1>
         
         <form onSubmit={handleSubmit} style={styles.form}>
@@ -209,12 +216,28 @@ const styles = {
     padding: '2rem',
     maxWidth: '800px',
     width: '100%',
+    position: 'relative',
+  },
+  backButton: {
+    position: 'absolute',
+    top: '20px',
+    left: '20px',
+    background: 'none',
+    border: 'none',
+    color: '#667eea',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: '500',
+    padding: '5px 10px',
+    borderRadius: '6px',
+    transition: 'background 0.3s',
   },
   title: {
     fontSize: '28px',
     fontWeight: '600',
     color: '#333',
     marginBottom: '1.5rem',
+    marginTop: '1rem',
     textAlign: 'center',
   },
   form: {
