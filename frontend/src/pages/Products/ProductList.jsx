@@ -31,15 +31,15 @@ const ProductList = () => {
     if (stock > 0) {
       return (
         <div style={styles.badgeAvailable}>
-          <span style={styles.badgeDotGreen}></span>
-          Disponible
+          <span style={styles.badgeDotAvailable}></span>
+          En existencia
         </div>
       );
     }
     return (
       <div style={styles.badgeUnavailable}>
-        <span style={styles.badgeDotRed}></span>
-        Agotado
+        <span style={styles.badgeDotUnavailable}></span>
+        Sin stock
       </div>
     );
   };
@@ -57,7 +57,7 @@ const ProductList = () => {
       <div style={styles.container}>
         <div style={styles.loadingCard}>
           <div style={styles.spinner}></div>
-          <p style={styles.loadingText}>Cargando productos...</p>
+          <p style={styles.loadingText}>Cargando catálogo...</p>
         </div>
       </div>
     );
@@ -67,10 +67,10 @@ const ProductList = () => {
     return (
       <div style={styles.container}>
         <div style={styles.errorCard}>
-          <div style={styles.errorIcon}>⚠️</div>
+          <div style={styles.errorIcon}>!</div>
           <p style={styles.errorText}>{error}</p>
           <button onClick={fetchProducts} style={styles.retryBtn}>
-            Intentar de nuevo
+            Reintentar
           </button>
         </div>
       </div>
@@ -79,49 +79,49 @@ const ProductList = () => {
 
   return (
     <div style={styles.container}>
-      <div style={styles.heroSection}>
-        <div style={styles.heroContent}>
-          <h1 style={styles.heroTitle}>✨ Catálogo de Productos</h1>
-          <p style={styles.heroSubtitle}>Gestiona tu inventario de forma fácil y rápida</p>
+      <div style={styles.header}>
+        <div style={styles.headerContent}>
+          <h1 style={styles.title}>Gestión de Inventario</h1>
+          <p style={styles.subtitle}>Catálogo de productos y control de existencias</p>
         </div>
-        <button onClick={() => navigate('/products/new')} style={styles.heroBtn}>
+        <button onClick={() => navigate('/products/new')} style={styles.primaryBtn}>
           <span style={styles.btnIcon}>+</span>
-          Nuevo Producto
+          Nuevo producto
         </button>
       </div>
 
-      <div style={styles.statsBar}>
-        <div style={styles.statItem}>
-          <span style={styles.statNumber}>{products.length}</span>
-          <span style={styles.statLabel}>Total Productos</span>
+      <div style={styles.statsGrid}>
+        <div style={styles.statCard}>
+          <div style={styles.statValue}>{products.length}</div>
+          <div style={styles.statLabel}>Total productos</div>
         </div>
-        <div style={styles.statDivider}></div>
-        <div style={styles.statItem}>
-          <span style={styles.statNumber}>
-            {products.filter(p => p.stock > 0).length}
-          </span>
-          <span style={styles.statLabel}>Disponibles</span>
+        <div style={styles.statCard}>
+          <div style={styles.statValue}>{products.filter(p => p.stock > 0).length}</div>
+          <div style={styles.statLabel}>En existencia</div>
         </div>
-        <div style={styles.statDivider}></div>
-        <div style={styles.statItem}>
-          <span style={styles.statNumber}>
-            {products.filter(p => p.stock === 0).length}
-          </span>
-          <span style={styles.statLabel}>Agotados</span>
+        <div style={styles.statCard}>
+          <div style={styles.statValue}>{products.filter(p => p.stock === 0).length}</div>
+          <div style={styles.statLabel}>Sin stock</div>
+        </div>
+        <div style={styles.statCard}>
+          <div style={styles.statValue}>
+            {products.reduce((sum, p) => sum + p.stock, 0)}
+          </div>
+          <div style={styles.statLabel}>Unidades totales</div>
         </div>
       </div>
 
       {products.length === 0 ? (
-        <div style={styles.emptyCard}>
-          <div style={styles.emptyIcon}>📦</div>
-          <h3 style={styles.emptyTitle}>No hay productos aún</h3>
-          <p style={styles.emptyText}>Comienza registrando tu primer producto</p>
+        <div style={styles.emptyState}>
+          <div style={styles.emptyIcon}>📋</div>
+          <h3 style={styles.emptyTitle}>Catálogo vacío</h3>
+          <p style={styles.emptyText}>No hay productos registrados en el sistema</p>
           <button onClick={() => navigate('/products/new')} style={styles.emptyBtn}>
-            + Registrar producto
+            Registrar primer producto
           </button>
         </div>
       ) : (
-        <div style={styles.tableWrapper}>
+        <div style={styles.tableContainer}>
           <table style={styles.table}>
             <thead>
               <tr style={styles.tableHeader}>
@@ -137,23 +137,23 @@ const ProductList = () => {
               {products.map((product, index) => (
                 <tr key={product.id} style={index % 2 === 0 ? styles.tableRow : styles.tableRowAlt}>
                   <td style={styles.td}>
-                    <code style={styles.skuCode}>{product.sku}</code>
+                    <code style={styles.sku}>{product.sku}</code>
                   </td>
                   <td style={styles.td}>
                     <div style={styles.productName}>{product.name}</div>
                   </td>
                   <td style={styles.td}>
-                    <div style={styles.productDesc}>
-                      {product.description || '—'}
+                    <div style={styles.description}>
+                      {product.description || '-'}
                     </div>
                   </td>
                   <td style={styles.td}>
-                    <div style={styles.productPrice}>{formatPrice(product.price)}</div>
+                    <div style={styles.price}>{formatPrice(product.price)}</div>
                   </td>
                   <td style={styles.td}>
-                    <div style={styles.stockBadge}>
+                    <div style={styles.stock}>
                       <span style={styles.stockNumber}>{product.stock}</span>
-                      <span style={styles.stockUnit}>unidades</span>
+                      <span style={styles.stockUnit}>uds.</span>
                     </div>
                   </td>
                   <td style={styles.td}>
@@ -172,294 +172,370 @@ const ProductList = () => {
 const styles = {
   container: {
     minHeight: '100vh',
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    backgroundColor: '#f5f7fa',
     padding: '2rem',
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
   },
-  heroSection: {
-    maxWidth: '1200px',
+  
+  header: {
+    maxWidth: '1280px',
     margin: '0 auto 2rem auto',
     display: 'flex',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     flexWrap: 'wrap',
-    gap: '1rem',
-    padding: '2rem',
-    background: 'rgba(255,255,255,0.95)',
-    borderRadius: '20px',
-    boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
-    backdropFilter: 'blur(10px)',
+    gap: '1.5rem',
+    paddingBottom: '1.5rem',
+    borderBottom: '1px solid #e2e8f0',
   },
-  heroContent: {
+  
+  headerContent: {
     flex: 1,
   },
-  heroTitle: {
-    fontSize: '2.5rem',
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
+  
+  title: {
+    fontSize: '1.875rem',
+    fontWeight: '600',
+    color: '#1e293b',
     marginBottom: '0.5rem',
+    letterSpacing: '-0.025em',
   },
-  heroSubtitle: {
-    color: '#666',
-    fontSize: '1rem',
+  
+  subtitle: {
+    fontSize: '0.875rem',
+    color: '#64748b',
+    fontWeight: '400',
   },
-  heroBtn: {
-    padding: '12px 28px',
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+  
+  primaryBtn: {
+    padding: '0.625rem 1.5rem',
+    backgroundColor: '#5b3cc4',
     color: 'white',
     border: 'none',
-    borderRadius: '50px',
-    fontSize: '16px',
-    fontWeight: '600',
+    borderRadius: '0.5rem',
+    fontSize: '0.875rem',
+    fontWeight: '500',
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
-    transition: 'transform 0.2s, box-shadow 0.2s',
-    boxShadow: '0 4px 15px rgba(102,126,234,0.4)',
+    gap: '0.5rem',
+    transition: 'all 0.2s ease',
+    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
   },
+  
   btnIcon: {
-    fontSize: '20px',
-    fontWeight: 'bold',
+    fontSize: '1.125rem',
+    fontWeight: '600',
   },
-  statsBar: {
-    maxWidth: '1200px',
+  
+  statsGrid: {
+    maxWidth: '1280px',
     margin: '0 auto 2rem auto',
-    display: 'flex',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    background: 'white',
-    borderRadius: '15px',
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+    gap: '1rem',
+  },
+  
+  statCard: {
+    backgroundColor: 'white',
     padding: '1.5rem',
-    boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
+    borderRadius: '0.75rem',
+    border: '1px solid #e2e8f0',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+    transition: 'box-shadow 0.2s ease',
   },
-  statItem: {
-    textAlign: 'center',
-    flex: 1,
-  },
-  statNumber: {
-    display: 'block',
+  
+  statValue: {
     fontSize: '2rem',
-    fontWeight: 'bold',
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: '0.5rem',
+    letterSpacing: '-0.025em',
   },
+  
   statLabel: {
-    fontSize: '0.85rem',
-    color: '#666',
-    marginTop: '0.25rem',
-    display: 'block',
+    fontSize: '0.75rem',
+    fontWeight: '500',
+    color: '#64748b',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
   },
-  statDivider: {
-    width: '1px',
-    height: '40px',
-    background: '#e0e0e0',
-  },
-  tableWrapper: {
-    maxWidth: '1200px',
+  
+  tableContainer: {
+    maxWidth: '1280px',
     margin: '0 auto',
-    background: 'white',
-    borderRadius: '20px',
-    overflow: 'hidden',
-    boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
+    backgroundColor: 'white',
+    borderRadius: '0.75rem',
+    border: '1px solid #e2e8f0',
+    overflow: 'auto',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
   },
+  
   table: {
     width: '100%',
     borderCollapse: 'collapse',
+    minWidth: '800px',
   },
+  
   tableHeader: {
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    backgroundColor: '#f8fafc',
+    borderBottom: '1px solid #e2e8f0',
   },
+  
   th: {
-    padding: '1rem',
+    padding: '1rem 1rem',
     textAlign: 'left',
-    color: 'white',
+    fontSize: '0.75rem',
     fontWeight: '600',
-    fontSize: '0.9rem',
+    color: '#475569',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
   },
+  
   tableRow: {
-    borderBottom: '1px solid #f0f0f0',
-    transition: 'background 0.2s',
+    borderBottom: '1px solid #f1f5f9',
+    transition: 'background-color 0.2s ease',
   },
+  
   tableRowAlt: {
-    background: '#fafafa',
-    borderBottom: '1px solid #f0f0f0',
-    transition: 'background 0.2s',
+    backgroundColor: '#fefefe',
+    borderBottom: '1px solid #f1f5f9',
+    transition: 'background-color 0.2s ease',
   },
+  
   td: {
-    padding: '1rem',
-    fontSize: '0.9rem',
+    padding: '1rem 1rem',
+    fontSize: '0.875rem',
+    color: '#334155',
   },
-  skuCode: {
-    background: '#f5f5f5',
-    padding: '4px 8px',
-    borderRadius: '6px',
-    fontSize: '0.85rem',
-    fontFamily: 'monospace',
-    color: '#667eea',
+  
+  sku: {
+    fontFamily: "'SF Mono', 'Monaco', 'Cascadia Code', monospace",
+    fontSize: '0.75rem',
+    backgroundColor: '#f1f5f9',
+    padding: '0.25rem 0.5rem',
+    borderRadius: '0.375rem',
+    color: '#475569',
   },
+  
   productName: {
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: '500',
+    color: '#1e293b',
   },
-  productDesc: {
-    color: '#888',
-    fontSize: '0.85rem',
-    maxWidth: '200px',
+  
+  description: {
+    fontSize: '0.8125rem',
+    color: '#64748b',
+    maxWidth: '250px',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
   },
-  productPrice: {
-    fontWeight: 'bold',
-    color: '#667eea',
-    fontSize: '1rem',
+  
+  price: {
+    fontWeight: '600',
+    color: '#5b3cc4',
   },
-  stockBadge: {
+  
+  stock: {
     display: 'flex',
-    alignItems: 'center',
-    gap: '4px',
+    alignItems: 'baseline',
+    gap: '0.25rem',
   },
+  
   stockNumber: {
-    fontWeight: 'bold',
-    fontSize: '1rem',
-    color: '#333',
+    fontWeight: '600',
+    color: '#1e293b',
+    fontSize: '0.875rem',
   },
+  
   stockUnit: {
     fontSize: '0.75rem',
-    color: '#888',
+    color: '#94a3b8',
   },
+  
   badgeAvailable: {
     display: 'inline-flex',
     alignItems: 'center',
-    gap: '6px',
-    padding: '4px 12px',
-    background: '#d4edda',
-    color: '#155724',
-    borderRadius: '20px',
-    fontSize: '0.85rem',
+    gap: '0.5rem',
+    padding: '0.25rem 0.75rem',
+    backgroundColor: '#f0fdf4',
+    border: '1px solid #bbf7d0',
+    borderRadius: '2rem',
+    fontSize: '0.75rem',
     fontWeight: '500',
+    color: '#166534',
     width: 'fit-content',
   },
+  
   badgeUnavailable: {
     display: 'inline-flex',
     alignItems: 'center',
-    gap: '6px',
-    padding: '4px 12px',
-    background: '#f8d7da',
-    color: '#721c24',
-    borderRadius: '20px',
-    fontSize: '0.85rem',
+    gap: '0.5rem',
+    padding: '0.25rem 0.75rem',
+    backgroundColor: '#fef2f2',
+    border: '1px solid #fecaca',
+    borderRadius: '2rem',
+    fontSize: '0.75rem',
     fontWeight: '500',
+    color: '#991b1b',
     width: 'fit-content',
   },
-  badgeDotGreen: {
-    width: '8px',
-    height: '8px',
-    background: '#28a745',
+  
+  badgeDotAvailable: {
+    width: '0.5rem',
+    height: '0.5rem',
+    backgroundColor: '#22c55e',
     borderRadius: '50%',
     display: 'inline-block',
   },
-  badgeDotRed: {
-    width: '8px',
-    height: '8px',
-    background: '#dc3545',
+  
+  badgeDotUnavailable: {
+    width: '0.5rem',
+    height: '0.5rem',
+    backgroundColor: '#ef4444',
     borderRadius: '50%',
     display: 'inline-block',
   },
+  
   loadingCard: {
-    maxWidth: '400px',
-    margin: '100px auto',
-    background: 'white',
-    borderRadius: '20px',
+    maxWidth: '28rem',
+    margin: '8rem auto',
+    backgroundColor: 'white',
+    borderRadius: '0.75rem',
     padding: '3rem',
     textAlign: 'center',
-    boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
+    border: '1px solid #e2e8f0',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
   },
+  
   spinner: {
-    width: '50px',
-    height: '50px',
-    border: '4px solid #f3f3f3',
-    borderTop: '4px solid #667eea',
+    width: '2.5rem',
+    height: '2.5rem',
+    border: '3px solid #e2e8f0',
+    borderTopColor: '#5b3cc4',
     borderRadius: '50%',
-    animation: 'spin 1s linear infinite',
+    animation: 'spin 0.8s linear infinite',
     margin: '0 auto 1rem',
   },
+  
   loadingText: {
-    color: '#666',
+    color: '#64748b',
+    fontSize: '0.875rem',
   },
+  
   errorCard: {
-    maxWidth: '400px',
-    margin: '100px auto',
-    background: 'white',
-    borderRadius: '20px',
+    maxWidth: '28rem',
+    margin: '8rem auto',
+    backgroundColor: 'white',
+    borderRadius: '0.75rem',
     padding: '3rem',
     textAlign: 'center',
-    boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
+    border: '1px solid #fecaca',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
   },
+  
   errorIcon: {
+    width: '3rem',
+    height: '3rem',
+    backgroundColor: '#fef2f2',
+    color: '#dc2626',
+    borderRadius: '50%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '1.5rem',
+    fontWeight: 'bold',
+    margin: '0 auto 1rem',
+  },
+  
+  errorText: {
+    color: '#991b1b',
+    marginBottom: '1.5rem',
+    fontSize: '0.875rem',
+  },
+  
+  retryBtn: {
+    padding: '0.5rem 1.5rem',
+    backgroundColor: '#5b3cc4',
+    color: 'white',
+    border: 'none',
+    borderRadius: '0.5rem',
+    fontSize: '0.875rem',
+    fontWeight: '500',
+    cursor: 'pointer',
+    transition: 'background-color 0.2s ease',
+  },
+  
+  emptyState: {
+    maxWidth: '32rem',
+    margin: '4rem auto',
+    backgroundColor: 'white',
+    borderRadius: '0.75rem',
+    padding: '3rem',
+    textAlign: 'center',
+    border: '1px solid #e2e8f0',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+  },
+  
+  emptyIcon: {
     fontSize: '3rem',
     marginBottom: '1rem',
+    opacity: 0.5,
   },
-  errorText: {
-    color: '#dc2626',
-    marginBottom: '1.5rem',
-  },
-  retryBtn: {
-    padding: '10px 20px',
-    background: '#667eea',
-    color: 'white',
-    border: 'none',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    fontSize: '14px',
-  },
-  emptyCard: {
-    maxWidth: '500px',
-    margin: '50px auto',
-    background: 'white',
-    borderRadius: '20px',
-    padding: '3rem',
-    textAlign: 'center',
-    boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
-  },
-  emptyIcon: {
-    fontSize: '4rem',
-    marginBottom: '1rem',
-  },
+  
   emptyTitle: {
-    fontSize: '1.5rem',
-    color: '#333',
+    fontSize: '1.25rem',
+    fontWeight: '500',
+    color: '#1e293b',
     marginBottom: '0.5rem',
   },
+  
   emptyText: {
-    color: '#666',
+    color: '#64748b',
+    fontSize: '0.875rem',
     marginBottom: '1.5rem',
   },
+  
   emptyBtn: {
-    padding: '12px 24px',
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    padding: '0.625rem 1.5rem',
+    backgroundColor: '#5b3cc4',
     color: 'white',
     border: 'none',
-    borderRadius: '50px',
-    cursor: 'pointer',
-    fontSize: '14px',
+    borderRadius: '0.5rem',
+    fontSize: '0.875rem',
     fontWeight: '500',
+    cursor: 'pointer',
+    transition: 'background-color 0.2s ease',
   },
 };
 
-// Agregar animación
-const styleSheet = document.createElement("style");
+// Agregar animaciones y hover effects
+const styleSheet = document.createElement('style');
 styleSheet.textContent = `
   @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    to { transform: rotate(360deg); }
   }
   
   button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(102,126,234,0.4);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+  
+  button:active {
+    transform: translateY(0);
+  }
+  
+  ${styles.primaryBtn}:hover {
+    background-color: #4a2db8;
+  }
+  
+  ${styles.statCard}:hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+  
+  ${styles.tableRow}:hover, ${styles.tableRowAlt}:hover {
+    background-color: #faf9fe;
   }
 `;
 document.head.appendChild(styleSheet);
