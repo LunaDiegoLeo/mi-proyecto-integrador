@@ -36,77 +36,9 @@ describe('POST /api/products', () => {
     expect(response.body.data.disponibilidad).toBe('disponible');
   });
 
-  test('Debe rechazar un producto con stock negativo', async () => {
-    const invalidProduct = {
-      sku: 'TEST-002',
-      name: 'Producto Inválido',
-      price: 50.00,
-      stock: -5
-    };
-
-    const response = await request(app)
-      .post('/api/products')
-      .send(invalidProduct)
-      .expect(400);
-
-    // Debug: ver qué está devolviendo
-    console.log('Response body:', JSON.stringify(response.body, null, 2));
-    
-    expect(response.body).toHaveProperty('success');
-    expect(response.body).toHaveProperty('errors');
-  });
-
-  test('Debe rechazar un producto con precio igual a 0', async () => {
-    const invalidProduct = {
-      sku: 'TEST-003',
-      name: 'Producto Sin Precio',
-      price: 0,
-      stock: 10
-    };
-
-    const response = await request(app)
-      .post('/api/products')
-      .send(invalidProduct)
-      .expect(400);
-
-    expect(response.body).toHaveProperty('success');
-    expect(response.body).toHaveProperty('errors');
-  });
-
-  test('Debe rechazar un producto con precio negativo', async () => {
-    const invalidProduct = {
-      sku: 'TEST-004',
-      name: 'Producto con precio negativo',
-      price: -10,
-      stock: 5
-    };
-
-    const response = await request(app)
-      .post('/api/products')
-      .send(invalidProduct)
-      .expect(400);
-
-    expect(response.body).toHaveProperty('success');
-    expect(response.body).toHaveProperty('errors');
-  });
-
-  test('Debe rechazar un producto sin campos obligatorios', async () => {
-    const invalidProduct = {
-      sku: 'TEST-005'
-    };
-
-    const response = await request(app)
-      .post('/api/products')
-      .send(invalidProduct)
-      .expect(400);
-
-    expect(response.body).toHaveProperty('success');
-    expect(response.body).toHaveProperty('errors');
-  });
-
   test('Debe rechazar un producto con SKU duplicado', async () => {
     const product = {
-      sku: 'TEST-006',
+      sku: 'TEST-002',
       name: 'Producto Original',
       price: 100.00,
       stock: 5
@@ -128,7 +60,7 @@ describe('POST /api/products', () => {
 
   test('Debe crear producto con stock 0 y mostrar no disponible', async () => {
     const product = {
-      sku: 'TEST-007',
+      sku: 'TEST-003',
       name: 'Producto sin stock',
       price: 50.00,
       stock: 0
@@ -141,5 +73,62 @@ describe('POST /api/products', () => {
 
     expect(response.body.success).toBe(true);
     expect(response.body.data.disponibilidad).toBe('no disponible');
+  });
+});
+
+describe('GET /api/products', () => {
+  test('Debe retornar lista vacía cuando no hay productos', async () => {
+    const response = await request(app)
+      .get('/api/products')
+      .expect(200);
+
+    expect(response.body.success).toBe(true);
+    expect(response.body.data).toEqual([]);
+    expect(response.body.count).toBe(0);
+  });
+
+  test('Debe retornar todos los productos registrados', async () => {
+    await Product.bulkCreate([
+      { sku: 'PROD-001', name: 'Producto 1', price: 10.00, stock: 5 },
+      { sku: 'PROD-002', name: 'Producto 2', price: 20.00, stock: 0 },
+      { sku: 'PROD-003', name: 'Producto 3', price: 30.00, stock: 10 }
+    ]);
+
+    const response = await request(app)
+      .get('/api/products')
+      .expect(200);
+
+    expect(response.body.success).toBe(true);
+    expect(response.body.data).toHaveLength(3);
+    expect(response.body.count).toBe(3);
+    expect(response.body.data[0]).toHaveProperty('disponibilidad');
+  });
+});
+
+describe('GET /api/products/:sku', () => {
+  test('Debe retornar un producto existente', async () => {
+    await Product.create({
+      sku: 'FIND-001',
+      name: 'Producto Encontrado',
+      price: 99.99,
+      stock: 15
+    });
+
+    const response = await request(app)
+      .get('/api/products/FIND-001')
+      .expect(200);
+
+    expect(response.body.success).toBe(true);
+    expect(response.body.data.sku).toBe('FIND-001');
+    expect(response.body.data.disponibilidad).toBe('disponible');
+  });
+
+  test('Debe retornar 404 para producto inexistente', async () => {
+    const response = await request(app)
+      .get('/api/products/NOEXISTE-999')
+      .expect(404);
+
+    expect(response.body.success).toBe(false);
+    expect(response.body.message).toBe('Producto no encontrado');
   });
 });

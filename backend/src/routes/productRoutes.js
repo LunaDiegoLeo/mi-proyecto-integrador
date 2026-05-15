@@ -1,9 +1,50 @@
 // src/routes/productRoutes.js
 const express = require('express');
 const router = express.Router();
-const { createProduct } = require('../controllers/productController');
+const { 
+  createProduct, 
+  getAllProducts, 
+  getProductBySku 
+} = require('../controllers/productController');
 const validateInput = require('../middlewares/validateInput');
 const { productSchema } = require('../schemas/productSchema');
+
+/**
+ * @swagger
+ * /api/products:
+ *   get:
+ *     summary: Obtener todos los productos
+ *     tags: [Products]
+ *     responses:
+ *       200:
+ *         description: Lista de productos obtenida exitosamente
+ *       500:
+ *         description: Error interno del servidor
+ */
+router.get('/', getAllProducts);
+
+/**
+ * @swagger
+ * /api/products/{sku}:
+ *   get:
+ *     summary: Obtener un producto por SKU
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: sku
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: SKU del producto
+ *     responses:
+ *       200:
+ *         description: Producto encontrado
+ *       404:
+ *         description: Producto no encontrado
+ *       500:
+ *         description: Error interno del servidor
+ */
+router.get('/:sku', getProductBySku);
 
 /**
  * @swagger
