@@ -9,8 +9,9 @@ const startServer = async () => {
     await sequelize.authenticate();
     console.log('✓ Conexión a PostgreSQL exitosa');
     
+    // Sincronizar modelos (crear tablas automáticamente)
     await sequelize.sync({ alter: true });
-    console.log('✓ Modelos sincronizados');
+    console.log('✓ Modelos sincronizados con la base de datos');
     
     app.listen(PORT, () => {
       console.log(`✓ Servidor corriendo en http://localhost:${PORT}`);

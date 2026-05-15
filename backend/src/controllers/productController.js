@@ -41,6 +41,74 @@ const createProduct = async (req, res) => {
   }
 };
 
+const getAllProducts = async (req, res) => {
+  try {
+    const products = await Product.findAll({
+      order: [['createdAt', 'DESC']]
+    });
+
+    const productsWithAvailability = products.map(product => ({
+      sku: product.sku,
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      stock: product.stock,
+      disponibilidad: product.disponibilidad,
+      createdAt: product.createdAt,
+      updatedAt: product.updatedAt
+    }));
+
+    return res.status(200).json({
+      success: true,
+      data: productsWithAvailability,
+      count: productsWithAvailability.length
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Error al obtener productos',
+      error: error.message
+    });
+  }
+};
+
+const getProductBySku = async (req, res) => {
+  try {
+    const { sku } = req.params;
+
+    const product = await Product.findByPk(sku);
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Producto no encontrado'
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        sku: product.sku,
+        name: product.name,
+        description: product.description,
+        price: product.price,
+        stock: product.stock,
+        disponibilidad: product.disponibilidad,
+        createdAt: product.createdAt,
+        updatedAt: product.updatedAt
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Error al obtener el producto',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
-  createProduct
+  createProduct,
+  getAllProducts,
+  getProductBySku
 };
