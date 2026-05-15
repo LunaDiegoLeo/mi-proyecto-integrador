@@ -17,7 +17,7 @@ const ProductList = () => {
     try {
       setLoading(true);
       const response = await api.get('/products');
-      setProducts(response.data.products);
+      setProducts(response.data.data);
       setError(null);
     } catch (err) {
       console.error('Error:', err);
