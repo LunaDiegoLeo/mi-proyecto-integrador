@@ -1,7 +1,7 @@
-// frontend/src/routes/AppRouter.jsx
+// src/routes/AppRouter.jsx
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import ProductList from '../pages/Products/ProductList';
-import ProductForm from '../pages/ProductForm/index';
+import ProductForm from '../pages/ProductForm';
 
 const AppRouter = () => {
   return (
@@ -9,6 +9,7 @@ const AppRouter = () => {
       <Routes>
         <Route path="/" element={<ProductList />} />
         <Route path="/products/new" element={<ProductForm />} />
+        <Route path="/products/edit/:sku" element={<ProductForm />} />
       </Routes>
     </BrowserRouter>
   );

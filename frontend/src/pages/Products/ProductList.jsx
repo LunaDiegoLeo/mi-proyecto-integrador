@@ -1,4 +1,4 @@
-// frontend/src/pages/Products/ProductList.jsx
+// src/pages/Products/ProductList.jsx
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
@@ -17,7 +17,7 @@ const ProductList = () => {
     try {
       setLoading(true);
       const response = await api.get('/products');
-      setProducts(response.data.data);
+      setProducts(response.data.products);
       setError(null);
     } catch (err) {
       console.error('Error:', err);
@@ -25,6 +25,33 @@ const ProductList = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDelete = async (product) => {
+    const confirmDelete = window.confirm(
+      `¿Estás seguro de que deseas eliminar el producto "${product.name}" (SKU: ${product.sku})?\n\nEsta acción no se puede deshacer.`
+    );
+    
+    if (!confirmDelete) {
+      return;
+    }
+    
+    try {
+      await api.delete(`/products/${product.sku}`);
+      alert('Producto eliminado exitosamente');
+      fetchProducts(); // Refrescar la tabla
+    } catch (error) {
+      console.error('Error al eliminar:', error);
+      if (error.response && error.response.status === 404) {
+        alert('Producto no encontrado');
+      } else {
+        alert('Error al eliminar el producto');
+      }
+    }
+  };
+
+  const handleEdit = (sku) => {
+    navigate(`/products/edit/${sku}`);
   };
 
   const getAvailabilityBadge = (stock) => {
@@ -131,6 +158,7 @@ const ProductList = () => {
                 <th style={styles.th}>Precio</th>
                 <th style={styles.th}>Stock</th>
                 <th style={styles.th}>Estado</th>
+                <th style={styles.th}>Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -158,6 +186,24 @@ const ProductList = () => {
                   </td>
                   <td style={styles.td}>
                     {getAvailabilityBadge(product.stock)}
+                  </td>
+                  <td style={styles.td}>
+                    <div style={styles.actions}>
+                      <button
+                        onClick={() => handleEdit(product.sku)}
+                        style={styles.editBtn}
+                        title="Editar producto"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => handleDelete(product)}
+                        style={styles.deleteBtn}
+                        title="Eliminar producto"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -274,7 +320,7 @@ const styles = {
   table: {
     width: '100%',
     borderCollapse: 'collapse',
-    minWidth: '800px',
+    minWidth: '900px',
   },
   
   tableHeader: {
@@ -398,6 +444,35 @@ const styles = {
     display: 'inline-block',
   },
   
+  actions: {
+    display: 'flex',
+    gap: '0.5rem',
+  },
+  
+  editBtn: {
+    padding: '0.375rem 0.875rem',
+    backgroundColor: '#f1f5f9',
+    color: '#475569',
+    border: '1px solid #e2e8f0',
+    borderRadius: '0.375rem',
+    fontSize: '0.75rem',
+    fontWeight: '500',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+  },
+  
+  deleteBtn: {
+    padding: '0.375rem 0.875rem',
+    backgroundColor: '#fef2f2',
+    color: '#dc2626',
+    border: '1px solid #fecaca',
+    borderRadius: '0.375rem',
+    fontSize: '0.75rem',
+    fontWeight: '500',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+  },
+  
   loadingCard: {
     maxWidth: '28rem',
     margin: '8rem auto',
@@ -510,24 +585,26 @@ const styles = {
   },
 };
 
-// Agregar animaciones y hover effects
 const styleSheet = document.createElement('style');
 styleSheet.textContent = `
   @keyframes spin {
     to { transform: rotate(360deg); }
   }
   
-  button:hover {
+  ${styles.editBtn}:hover {
+    background-color: #e2e8f0;
     transform: translateY(-1px);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   }
   
-  button:active {
-    transform: translateY(0);
+  ${styles.deleteBtn}:hover {
+    background-color: #fecaca;
+    transform: translateY(-1px);
   }
   
   ${styles.primaryBtn}:hover {
     background-color: #4a2db8;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   }
   
   ${styles.statCard}:hover {
@@ -536,6 +613,10 @@ styleSheet.textContent = `
   
   ${styles.tableRow}:hover, ${styles.tableRowAlt}:hover {
     background-color: #faf9fe;
+  }
+  
+  button:active {
+    transform: translateY(0);
   }
 `;
 document.head.appendChild(styleSheet);
