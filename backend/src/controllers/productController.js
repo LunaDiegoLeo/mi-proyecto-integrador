@@ -107,8 +107,87 @@ const getProductBySku = async (req, res) => {
   }
 };
 
+// src/controllers/productController.js (solo la función updateProduct)
+const updateProduct = async (req, res) => {
+  try {
+    const { sku } = req.params;
+    const { name, description, price } = req.body;
+
+    const product = await Product.findByPk(sku);
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Producto no encontrado'
+      });
+    }
+
+    // Construir objeto de actualización solo con campos presentes
+    const updateData = {};
+    if (name !== undefined) updateData.name = name;
+    if (description !== undefined) updateData.description = description;
+    if (price !== undefined) updateData.price = price;
+
+    await product.update(updateData);
+    await product.reload(); // Recargar para obtener datos actualizados
+
+    return res.status(200).json({
+      success: true,
+      message: 'Producto actualizado exitosamente',
+      data: {
+        sku: product.sku,
+        name: product.name,
+        description: product.description,
+        price: product.price,
+        stock: product.stock,
+        disponibilidad: product.disponibilidad
+      }
+    });
+  } catch (error) {
+    console.error('Error en updateProduct:', error); // Debug
+    return res.status(500).json({
+      success: false,
+      message: 'Error al actualizar el producto',
+      error: error.message
+    });
+  }
+};
+
+const deleteProduct = async (req, res) => {
+  try {
+    const { sku } = req.params;
+
+    const product = await Product.findByPk(sku);
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Producto no encontrado'
+      });
+    }
+
+    await product.destroy();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Producto eliminado exitosamente',
+      data: {
+        sku: product.sku
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Error al eliminar el producto',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   createProduct,
   getAllProducts,
-  getProductBySku
+  getProductBySku,
+  updateProduct,
+  deleteProduct
 };

@@ -4,10 +4,12 @@ const router = express.Router();
 const { 
   createProduct, 
   getAllProducts, 
-  getProductBySku 
+  getProductBySku,
+  updateProduct,
+  deleteProduct
 } = require('../controllers/productController');
 const validateInput = require('../middlewares/validateInput');
-const { productSchema } = require('../schemas/productSchema');
+const { productSchema, updateProductSchema } = require('../schemas/productSchema');
 
 /**
  * @swagger
@@ -90,5 +92,69 @@ router.get('/:sku', getProductBySku);
  *         description: Error interno del servidor
  */
 router.post('/', validateInput(productSchema), createProduct);
+
+/**
+ * @swagger
+ * /api/products/{sku}:
+ *   put:
+ *     summary: Actualizar datos generales de un producto
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: sku
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: SKU del producto (no modificable)
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: Nombre del producto
+ *               description:
+ *                 type: string
+ *                 description: Descripción del producto
+ *               price:
+ *                 type: number
+ *                 description: Precio del producto (debe ser mayor que 0)
+ *     responses:
+ *       200:
+ *         description: Producto actualizado exitosamente
+ *       400:
+ *         description: Datos de entrada inválidos
+ *       404:
+ *         description: Producto no encontrado
+ *       500:
+ *         description: Error interno del servidor
+ */
+router.put('/:sku', validateInput(updateProductSchema), updateProduct);
+
+/**
+ * @swagger
+ * /api/products/{sku}:
+ *   delete:
+ *     summary: Eliminar un producto
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: sku
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: SKU del producto a eliminar
+ *     responses:
+ *       200:
+ *         description: Producto eliminado exitosamente
+ *       404:
+ *         description: Producto no encontrado
+ *       500:
+ *         description: Error interno del servidor
+ */
+router.delete('/:sku', deleteProduct);
 
 module.exports = router;

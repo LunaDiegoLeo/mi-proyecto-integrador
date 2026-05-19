@@ -132,3 +132,110 @@ describe('GET /api/products/:sku', () => {
     expect(response.body.message).toBe('Producto no encontrado');
   });
 });
+
+describe('PUT /api/products/:sku', () => {
+  test('Debe actualizar un producto existente correctamente', async () => {
+    await Product.create({
+      sku: 'UPDATE-001',
+      name: 'Producto Original',
+      description: 'Descripción original',
+      price: 100.00,
+      stock: 10
+    });
+
+    const updateData = {
+      name: 'Producto Actualizado',
+      description: 'Nueva descripción',
+      price: 150.00
+    };
+
+    const response = await request(app)
+      .put('/api/products/UPDATE-001')
+      .send(updateData)
+      .expect(200);
+
+    expect(response.body.success).toBe(true);
+    expect(response.body.data.name).toBe(updateData.name);
+    expect(response.body.data.description).toBe(updateData.description);
+    expect(response.body.data.price).toBe(updateData.price);
+    expect(response.body.data.sku).toBe('UPDATE-001');
+    expect(response.body.data.stock).toBe(10);
+  });
+
+  test('Debe actualizar solo los campos enviados', async () => {
+    await Product.create({
+      sku: 'UPDATE-002',
+      name: 'Producto Original',
+      description: 'Descripción original',
+      price: 100.00,
+      stock: 5
+    });
+
+    const response = await request(app)
+      .put('/api/products/UPDATE-002')
+      .send({ price: 200.00 })
+      .expect(200);
+
+    expect(response.body.success).toBe(true);
+    expect(response.body.data.price).toBe(200.00);
+    expect(response.body.data.name).toBe('Producto Original');
+    expect(response.body.data.description).toBe('Descripción original');
+  });
+
+  test('Debe retornar 404 al intentar actualizar producto inexistente', async () => {
+    const response = await request(app)
+      .put('/api/products/NOEXISTE-999')
+      .send({ name: 'Nuevo Nombre' })
+      .expect(404);
+
+    expect(response.body.success).toBe(false);
+    expect(response.body.message).toBe('Producto no encontrado');
+  });
+
+  test('Debe rechazar actualización con precio inválido', async () => {
+    await Product.create({
+      sku: 'UPDATE-003',
+      name: 'Producto',
+      price: 100.00,
+      stock: 5
+    });
+
+    const response = await request(app)
+      .put('/api/products/UPDATE-003')
+      .send({ price: 0 })
+      .expect(400);
+
+    expect(response.body.success).toBe(false);
+  });
+});
+
+describe('DELETE /api/products/:sku', () => {
+  test('Debe eliminar un producto existente correctamente', async () => {
+    await Product.create({
+      sku: 'DELETE-001',
+      name: 'Producto a Eliminar',
+      price: 50.00,
+      stock: 10
+    });
+
+    const response = await request(app)
+      .delete('/api/products/DELETE-001')
+      .expect(200);
+
+    expect(response.body.success).toBe(true);
+    expect(response.body.message).toBe('Producto eliminado exitosamente');
+    expect(response.body.data.sku).toBe('DELETE-001');
+
+    const deletedProduct = await Product.findByPk('DELETE-001');
+    expect(deletedProduct).toBeNull();
+  });
+
+  test('Debe retornar 404 al intentar eliminar producto inexistente', async () => {
+    const response = await request(app)
+      .delete('/api/products/NOEXISTE-999')
+      .expect(404);
+
+    expect(response.body.success).toBe(false);
+    expect(response.body.message).toBe('Producto no encontrado');
+  });
+});
