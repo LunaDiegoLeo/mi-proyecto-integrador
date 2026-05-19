@@ -9,4 +9,18 @@ const productSchema = z.object({
   stock: z.number().int().min(0, 'El stock debe ser mayor o igual a 0')
 });
 
-module.exports = { productSchema };
+const updateProductSchema = z.object({
+  name: z.string().min(1, 'Nombre es obligatorio').optional(),
+  description: z.string().optional().nullable(),
+  price: z.number().positive('El precio debe ser mayor que 0').optional()
+}).refine(data => {
+  // Permitir description como undefined, null o string
+  const hasValidField = data.name !== undefined || 
+                        data.price !== undefined || 
+                        data.description !== undefined;
+  return hasValidField;
+}, {
+  message: 'Debe proporcionar al menos un campo para actualizar'
+});
+
+module.exports = { productSchema, updateProductSchema };

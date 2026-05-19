@@ -7,7 +7,7 @@ const ProductForm = () => {
   const navigate = useNavigate();
   const { sku } = useParams();
   const isEditMode = !!sku;
-  
+
   const [formData, setFormData] = useState({
     sku: '',
     name: '',
@@ -27,8 +27,13 @@ const ProductForm = () => {
 
   const fetchProduct = async () => {
     try {
-      const response = await api.get(`/products/sku/${sku}`);
-      const product = response.data.product;
+      // ❌ ANTES: const response = await api.get(`/products/sku/${sku}`);
+      // ✅ DESPUÉS:
+      const response = await api.get(`/products/${sku}`);
+
+      // También corrige el acceso a los datos
+      const product = response.data.data; // El backend retorna { success: true, data: {...} }
+
       setFormData({
         sku: product.sku,
         name: product.name,
@@ -48,7 +53,7 @@ const ProductForm = () => {
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.sku.trim()) {
+    if (!isEditMode && !formData.sku.trim()) {
       newErrors.sku = 'SKU es obligatorio';
     }
 
@@ -63,11 +68,14 @@ const ProductForm = () => {
       newErrors.price = 'Precio debe ser mayor a 0';
     }
 
-    const stock = parseInt(formData.stock);
-    if (!formData.stock && formData.stock !== 0) {
-      newErrors.stock = 'Stock es obligatorio';
-    } else if (isNaN(stock) || stock < 0) {
-      newErrors.stock = 'Stock debe ser mayor o igual a 0';
+    // Solo validar stock en modo creación
+    if (!isEditMode) {
+      const stock = parseInt(formData.stock);
+      if (formData.stock === '' || formData.stock === null || formData.stock === undefined) {
+        newErrors.stock = 'Stock es obligatorio';
+      } else if (isNaN(stock) || stock < 0) {
+        newErrors.stock = 'Stock debe ser mayor o igual a 0';
+      }
     }
 
     setErrors(newErrors);
@@ -84,30 +92,36 @@ const ProductForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
 
     setIsSubmitting(true);
-    
+
     try {
-      const payload = {
-        sku: formData.sku.trim(),
-        name: formData.name.trim(),
-        description: formData.description.trim() || null,
-        price: parseFloat(formData.price),
-        stock: parseInt(formData.stock),
-      };
-      
       if (isEditMode) {
+        // En modo edición, NO enviamos sku ni stock (solo name, description, price)
+        const payload = {
+          name: formData.name.trim(),
+          description: formData.description.trim() || undefined,
+          price: parseFloat(formData.price),
+        };
         await api.put(`/products/${formData.sku}`, payload);
         alert('Producto actualizado exitosamente');
       } else {
+        // En modo creación, enviamos todos los campos
+        const payload = {
+          sku: formData.sku.trim(),
+          name: formData.name.trim(),
+          description: formData.description.trim() || undefined,
+          price: parseFloat(formData.price),
+          stock: parseInt(formData.stock),
+        };
         await api.post('/products', payload);
         alert('Producto registrado exitosamente');
       }
-      
+
       navigate('/');
     } catch (error) {
       console.error('Error:', error);
@@ -115,11 +129,12 @@ const ProductForm = () => {
         if (error.response.status === 409) {
           alert('El SKU ya existe en el sistema');
         } else if (error.response.status === 400) {
-          const messages = error.response.data.errors || error.response.data.message;
-          if (Array.isArray(messages)) {
-            alert(`Error de validación:\n${messages.join('\n')}`);
+          const apiErrors = error.response.data.errors;
+          if (Array.isArray(apiErrors)) {
+            const messages = apiErrors.map(err => `${err.field}: ${err.message}`).join('\n');
+            alert(`Errores de validación:\n${messages}`);
           } else {
-            alert(`Error: ${messages || 'Datos inválidos'}`);
+            alert(`Error: ${error.response.data.message || 'Datos inválidos'}`);
           }
         } else if (error.response.status === 404) {
           alert('Producto no encontrado');
@@ -153,11 +168,11 @@ const ProductForm = () => {
         <button onClick={() => navigate('/')} style={styles.backButton}>
           ← Volver al listado
         </button>
-        
+
         <h1 style={styles.title}>
           {isEditMode ? 'Editar Producto' : 'Registrar Nuevo Producto'}
         </h1>
-        
+
         <form onSubmit={handleSubmit} style={styles.form}>
           <div style={styles.field}>
             <label style={styles.label}>SKU *</label>
@@ -221,20 +236,37 @@ const ProductForm = () => {
               {errors.price && <span style={styles.errorText}>{errors.price}</span>}
             </div>
 
-            <div style={{ ...styles.field, flex: 1 }}>
-              <label style={styles.label}>Stock *</label>
-              <input
-                type="number"
-                name="stock"
-                value={formData.stock}
-                onChange={handleChange}
-                style={{ ...styles.input, ...(errors.stock && styles.inputError) }}
-                placeholder="0"
-                step="1"
-                min="0"
-              />
-              {errors.stock && <span style={styles.errorText}>{errors.stock}</span>}
-            </div>
+            {!isEditMode && (
+              <div style={{ ...styles.field, flex: 1 }}>
+                <label style={styles.label}>Stock *</label>
+                <input
+                  type="number"
+                  name="stock"
+                  value={formData.stock}
+                  onChange={handleChange}
+                  style={{ ...styles.input, ...(errors.stock && styles.inputError) }}
+                  placeholder="0"
+                  step="1"
+                  min="0"
+                />
+                {errors.stock && <span style={styles.errorText}>{errors.stock}</span>}
+              </div>
+            )}
+
+            {isEditMode && (
+              <div style={{ ...styles.field, flex: 1 }}>
+                <label style={styles.label}>Stock actual</label>
+                <input
+                  type="number"
+                  value={formData.stock}
+                  disabled
+                  style={{ ...styles.input, ...styles.inputDisabled }}
+                />
+                <span style={styles.hintText}>
+                  El stock se ajusta desde el inventario en el listado
+                </span>
+              </div>
+            )}
           </div>
 
           <div style={styles.actions}>
@@ -250,8 +282,8 @@ const ProductForm = () => {
               disabled={isSubmitting}
               style={{ ...styles.submitButton, ...(isSubmitting && styles.disabledButton) }}
             >
-              {isSubmitting 
-                ? (isEditMode ? 'Actualizando...' : 'Registrando...') 
+              {isSubmitting
+                ? (isEditMode ? 'Actualizando...' : 'Registrando...')
                 : (isEditMode ? 'Actualizar Producto' : 'Registrar Producto')
               }
             </button>

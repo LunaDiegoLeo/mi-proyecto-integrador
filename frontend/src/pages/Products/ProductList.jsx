@@ -17,7 +17,7 @@ const ProductList = () => {
     try {
       setLoading(true);
       const response = await api.get('/products');
-      setProducts(response.data.products);
+      setProducts(response.data.data);
       setError(null);
     } catch (err) {
       console.error('Error:', err);
@@ -31,11 +31,11 @@ const ProductList = () => {
     const confirmDelete = window.confirm(
       `¿Estás seguro de que deseas eliminar el producto "${product.name}" (SKU: ${product.sku})?\n\nEsta acción no se puede deshacer.`
     );
-    
+
     if (!confirmDelete) {
       return;
     }
-    
+
     try {
       await api.delete(`/products/${product.sku}`);
       alert('Producto eliminado exitosamente');
@@ -163,7 +163,7 @@ const ProductList = () => {
             </thead>
             <tbody>
               {products.map((product, index) => (
-                <tr key={product.id} style={index % 2 === 0 ? styles.tableRow : styles.tableRowAlt}>
+                <tr key={product.sku} style={index % 2 === 0 ? styles.tableRow : styles.tableRowAlt}>
                   <td style={styles.td}>
                     <code style={styles.sku}>{product.sku}</code>
                   </td>
@@ -222,7 +222,7 @@ const styles = {
     padding: '2rem',
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
   },
-  
+
   header: {
     maxWidth: '1280px',
     margin: '0 auto 2rem auto',
@@ -234,11 +234,11 @@ const styles = {
     paddingBottom: '1.5rem',
     borderBottom: '1px solid #e2e8f0',
   },
-  
+
   headerContent: {
     flex: 1,
   },
-  
+
   title: {
     fontSize: '1.875rem',
     fontWeight: '600',
@@ -246,13 +246,13 @@ const styles = {
     marginBottom: '0.5rem',
     letterSpacing: '-0.025em',
   },
-  
+
   subtitle: {
     fontSize: '0.875rem',
     color: '#64748b',
     fontWeight: '400',
   },
-  
+
   primaryBtn: {
     padding: '0.625rem 1.5rem',
     backgroundColor: '#5b3cc4',
@@ -268,12 +268,12 @@ const styles = {
     transition: 'all 0.2s ease',
     boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
   },
-  
+
   btnIcon: {
     fontSize: '1.125rem',
     fontWeight: '600',
   },
-  
+
   statsGrid: {
     maxWidth: '1280px',
     margin: '0 auto 2rem auto',
@@ -281,7 +281,7 @@ const styles = {
     gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
     gap: '1rem',
   },
-  
+
   statCard: {
     backgroundColor: 'white',
     padding: '1.5rem',
@@ -290,7 +290,7 @@ const styles = {
     boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
     transition: 'box-shadow 0.2s ease',
   },
-  
+
   statValue: {
     fontSize: '2rem',
     fontWeight: '600',
@@ -298,7 +298,7 @@ const styles = {
     marginBottom: '0.5rem',
     letterSpacing: '-0.025em',
   },
-  
+
   statLabel: {
     fontSize: '0.75rem',
     fontWeight: '500',
@@ -306,7 +306,7 @@ const styles = {
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
   },
-  
+
   tableContainer: {
     maxWidth: '1280px',
     margin: '0 auto',
@@ -316,18 +316,18 @@ const styles = {
     overflow: 'auto',
     boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
   },
-  
+
   table: {
     width: '100%',
     borderCollapse: 'collapse',
     minWidth: '900px',
   },
-  
+
   tableHeader: {
     backgroundColor: '#f8fafc',
     borderBottom: '1px solid #e2e8f0',
   },
-  
+
   th: {
     padding: '1rem 1rem',
     textAlign: 'left',
@@ -337,24 +337,24 @@ const styles = {
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
   },
-  
+
   tableRow: {
     borderBottom: '1px solid #f1f5f9',
     transition: 'background-color 0.2s ease',
   },
-  
+
   tableRowAlt: {
     backgroundColor: '#fefefe',
     borderBottom: '1px solid #f1f5f9',
     transition: 'background-color 0.2s ease',
   },
-  
+
   td: {
     padding: '1rem 1rem',
     fontSize: '0.875rem',
     color: '#334155',
   },
-  
+
   sku: {
     fontFamily: "'SF Mono', 'Monaco', 'Cascadia Code', monospace",
     fontSize: '0.75rem',
@@ -363,12 +363,12 @@ const styles = {
     borderRadius: '0.375rem',
     color: '#475569',
   },
-  
+
   productName: {
     fontWeight: '500',
     color: '#1e293b',
   },
-  
+
   description: {
     fontSize: '0.8125rem',
     color: '#64748b',
@@ -377,29 +377,29 @@ const styles = {
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
   },
-  
+
   price: {
     fontWeight: '600',
     color: '#5b3cc4',
   },
-  
+
   stock: {
     display: 'flex',
     alignItems: 'baseline',
     gap: '0.25rem',
   },
-  
+
   stockNumber: {
     fontWeight: '600',
     color: '#1e293b',
     fontSize: '0.875rem',
   },
-  
+
   stockUnit: {
     fontSize: '0.75rem',
     color: '#94a3b8',
   },
-  
+
   badgeAvailable: {
     display: 'inline-flex',
     alignItems: 'center',
@@ -413,7 +413,7 @@ const styles = {
     color: '#166534',
     width: 'fit-content',
   },
-  
+
   badgeUnavailable: {
     display: 'inline-flex',
     alignItems: 'center',
@@ -427,7 +427,7 @@ const styles = {
     color: '#991b1b',
     width: 'fit-content',
   },
-  
+
   badgeDotAvailable: {
     width: '0.5rem',
     height: '0.5rem',
@@ -435,7 +435,7 @@ const styles = {
     borderRadius: '50%',
     display: 'inline-block',
   },
-  
+
   badgeDotUnavailable: {
     width: '0.5rem',
     height: '0.5rem',
@@ -443,12 +443,12 @@ const styles = {
     borderRadius: '50%',
     display: 'inline-block',
   },
-  
+
   actions: {
     display: 'flex',
     gap: '0.5rem',
   },
-  
+
   editBtn: {
     padding: '0.375rem 0.875rem',
     backgroundColor: '#f1f5f9',
@@ -460,7 +460,7 @@ const styles = {
     cursor: 'pointer',
     transition: 'all 0.2s ease',
   },
-  
+
   deleteBtn: {
     padding: '0.375rem 0.875rem',
     backgroundColor: '#fef2f2',
@@ -472,7 +472,7 @@ const styles = {
     cursor: 'pointer',
     transition: 'all 0.2s ease',
   },
-  
+
   loadingCard: {
     maxWidth: '28rem',
     margin: '8rem auto',
@@ -483,7 +483,7 @@ const styles = {
     border: '1px solid #e2e8f0',
     boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
   },
-  
+
   spinner: {
     width: '2.5rem',
     height: '2.5rem',
@@ -493,12 +493,12 @@ const styles = {
     animation: 'spin 0.8s linear infinite',
     margin: '0 auto 1rem',
   },
-  
+
   loadingText: {
     color: '#64748b',
     fontSize: '0.875rem',
   },
-  
+
   errorCard: {
     maxWidth: '28rem',
     margin: '8rem auto',
@@ -509,7 +509,7 @@ const styles = {
     border: '1px solid #fecaca',
     boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
   },
-  
+
   errorIcon: {
     width: '3rem',
     height: '3rem',
@@ -523,13 +523,13 @@ const styles = {
     fontWeight: 'bold',
     margin: '0 auto 1rem',
   },
-  
+
   errorText: {
     color: '#991b1b',
     marginBottom: '1.5rem',
     fontSize: '0.875rem',
   },
-  
+
   retryBtn: {
     padding: '0.5rem 1.5rem',
     backgroundColor: '#5b3cc4',
@@ -541,7 +541,7 @@ const styles = {
     cursor: 'pointer',
     transition: 'background-color 0.2s ease',
   },
-  
+
   emptyState: {
     maxWidth: '32rem',
     margin: '4rem auto',
@@ -552,26 +552,26 @@ const styles = {
     border: '1px solid #e2e8f0',
     boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
   },
-  
+
   emptyIcon: {
     fontSize: '3rem',
     marginBottom: '1rem',
     opacity: 0.5,
   },
-  
+
   emptyTitle: {
     fontSize: '1.25rem',
     fontWeight: '500',
     color: '#1e293b',
     marginBottom: '0.5rem',
   },
-  
+
   emptyText: {
     color: '#64748b',
     fontSize: '0.875rem',
     marginBottom: '1.5rem',
   },
-  
+
   emptyBtn: {
     padding: '0.625rem 1.5rem',
     backgroundColor: '#5b3cc4',
