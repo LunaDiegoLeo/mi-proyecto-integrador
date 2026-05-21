@@ -1,5 +1,6 @@
 // src/controllers/productController.js
 const Product = require('../models/Product');
+const { Op } = require('sequelize');
 
 const createProduct = async (req, res) => {
   try {
@@ -43,7 +44,21 @@ const createProduct = async (req, res) => {
 
 const getAllProducts = async (req, res) => {
   try {
+    const { search } = req.query;
+    
+    let whereClause = {};
+    
+    if (search) {
+      whereClause = {
+        [Op.or]: [
+          { name: { [Op.iLike]: `%${search}%` } },
+          { sku: { [Op.iLike]: `%${search}%` } }
+        ]
+      };
+    }
+
     const products = await Product.findAll({
+      where: whereClause,
       order: [['createdAt', 'DESC']]
     });
 
@@ -107,7 +122,6 @@ const getProductBySku = async (req, res) => {
   }
 };
 
-// src/controllers/productController.js (solo la función updateProduct)
 const updateProduct = async (req, res) => {
   try {
     const { sku } = req.params;
@@ -122,14 +136,13 @@ const updateProduct = async (req, res) => {
       });
     }
 
-    // Construir objeto de actualización solo con campos presentes
     const updateData = {};
     if (name !== undefined) updateData.name = name;
     if (description !== undefined) updateData.description = description;
     if (price !== undefined) updateData.price = price;
 
     await product.update(updateData);
-    await product.reload(); // Recargar para obtener datos actualizados
+    await product.reload();
 
     return res.status(200).json({
       success: true,
@@ -144,7 +157,6 @@ const updateProduct = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error en updateProduct:', error); // Debug
     return res.status(500).json({
       success: false,
       message: 'Error al actualizar el producto',
@@ -184,10 +196,47 @@ const deleteProduct = async (req, res) => {
   }
 };
 
+const updateStock = async (req, res) => {
+  try {
+    const { sku } = req.params;
+    const { stock } = req.body;
+
+    const product = await Product.findByPk(sku);
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Producto no encontrado'
+      });
+    }
+
+    await product.update({ stock });
+    await product.reload();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Stock actualizado exitosamente',
+      data: {
+        sku: product.sku,
+        name: product.name,
+        stock: product.stock,
+        disponibilidad: product.disponibilidad
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Error al actualizar el stock',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   createProduct,
   getAllProducts,
   getProductBySku,
   updateProduct,
-  deleteProduct
+  deleteProduct,
+  updateStock
 };

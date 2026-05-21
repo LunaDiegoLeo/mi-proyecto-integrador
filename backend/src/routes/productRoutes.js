@@ -6,17 +6,24 @@ const {
   getAllProducts, 
   getProductBySku,
   updateProduct,
-  deleteProduct
+  deleteProduct,
+  updateStock
 } = require('../controllers/productController');
 const validateInput = require('../middlewares/validateInput');
-const { productSchema, updateProductSchema } = require('../schemas/productSchema');
+const { productSchema, updateProductSchema, updateStockSchema } = require('../schemas/productSchema');
 
 /**
  * @swagger
  * /api/products:
  *   get:
- *     summary: Obtener todos los productos
+ *     summary: Obtener todos los productos con búsqueda opcional
  *     tags: [Products]
+ *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Búsqueda por nombre o SKU (insensible a mayúsculas)
  *     responses:
  *       200:
  *         description: Lista de productos obtenida exitosamente
@@ -133,6 +140,43 @@ router.post('/', validateInput(productSchema), createProduct);
  *         description: Error interno del servidor
  */
 router.put('/:sku', validateInput(updateProductSchema), updateProduct);
+
+/**
+ * @swagger
+ * /api/products/{sku}/stock:
+ *   patch:
+ *     summary: Actualizar el stock de un producto
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: sku
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: SKU del producto
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - stock
+ *             properties:
+ *               stock:
+ *                 type: integer
+ *                 description: Nueva cantidad en inventario (debe ser mayor o igual a 0)
+ *     responses:
+ *       200:
+ *         description: Stock actualizado exitosamente
+ *       400:
+ *         description: Stock inválido
+ *       404:
+ *         description: Producto no encontrado
+ *       500:
+ *         description: Error interno del servidor
+ */
+router.patch('/:sku/stock', validateInput(updateStockSchema), updateStock);
 
 /**
  * @swagger
