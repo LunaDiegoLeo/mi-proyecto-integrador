@@ -11,24 +11,37 @@ const ProductList = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [updatingStock, setUpdatingStock] = useState({});
+  const [deletingProduct, setDeletingProduct] = useState(null);
 
   useEffect(() => {
     fetchProducts();
   }, []);
 
   useEffect(() => {
-    filterProducts();
+    if (products && products.length > 0) {
+      filterProducts();
+    } else {
+      setFilteredProducts([]);
+    }
   }, [searchTerm, products]);
 
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/products');
-      setProducts(response.data.products);
       setError(null);
+      const response = await api.get('/products');
+      console.log('Productos cargados:', response.data);
+      setProducts(response.data.products || []);
+      setFilteredProducts(response.data.products || []);
     } catch (err) {
-      console.error('Error:', err);
-      setError('No se pudieron cargar los productos');
+      console.error('Error detallado:', err);
+      if (err.code === 'ERR_NETWORK') {
+        setError('No se puede conectar al servidor. Verifica que el backend esté corriendo en http://localhost:3000');
+      } else {
+        setError(err.response?.data?.message || 'No se pudieron cargar los productos');
+      }
+      setProducts([]);
+      setFilteredProducts([]);
     } finally {
       setLoading(false);
     }
@@ -42,15 +55,18 @@ const ProductList = () => {
 
     const term = searchTerm.toLowerCase().trim();
     const filtered = products.filter(product => 
-      product.name.toLowerCase().includes(term) ||
-      product.sku.toLowerCase().includes(term)
+      product && (
+        (product.name && product.name.toLowerCase().includes(term)) ||
+        (product.sku && product.sku.toLowerCase().includes(term))
+      )
     );
     setFilteredProducts(filtered);
   };
 
   const updateStock = useCallback(async (product, delta) => {
-    const newStock = product.stock + delta;
+    if (!product || product.stock === undefined) return;
     
+    const newStock = product.stock + delta;
     if (newStock < 0) return;
     
     setUpdatingStock(prev => ({ ...prev, [product.id]: true }));
@@ -62,19 +78,44 @@ const ProductList = () => {
       
       setProducts(prevProducts => 
         prevProducts.map(p => 
-          p.id === product.id 
-            ? { ...p, stock: response.data.product.stock }
+          p && p.id === product.id 
+            ? { ...p, stock: response.data.product?.stock || newStock }
             : p
         )
       );
     } catch (err) {
       console.error('Error al actualizar stock:', err);
-      alert('No se pudo actualizar el stock. Intente nuevamente.');
+      alert(err.response?.data?.message || 'No se pudo actualizar el stock');
       await fetchProducts();
     } finally {
       setUpdatingStock(prev => ({ ...prev, [product.id]: false }));
     }
   }, []);
+
+  const handleDelete = useCallback(async (product) => {
+    const confirmDelete = window.confirm(
+      `¿Estás seguro de eliminar el producto "${product.name}"?\n\nEsta acción no se puede deshacer.`
+    );
+    
+    if (!confirmDelete) return;
+    
+    setDeletingProduct(product.id);
+    
+    try {
+      await api.delete(`/products/${product.id}`);
+      await fetchProducts();
+      alert('Producto eliminado exitosamente');
+    } catch (err) {
+      console.error('Error al eliminar:', err);
+      alert(err.response?.data?.message || 'No se pudo eliminar el producto');
+    } finally {
+      setDeletingProduct(null);
+    }
+  }, []);
+
+  const handleEdit = useCallback((product) => {
+    navigate(`/products/edit/${product.id}`, { state: { product } });
+  }, [navigate]);
 
   const getAvailabilityBadge = (stock) => {
     if (stock > 0) {
@@ -94,6 +135,7 @@ const ProductList = () => {
   };
 
   const formatPrice = (price) => {
+    if (!price && price !== 0) return '$0.00';
     return new Intl.NumberFormat('es-MX', {
       style: 'currency',
       currency: 'MXN',
@@ -134,6 +176,11 @@ const ProductList = () => {
     );
   }
 
+  const totalProducts = products?.length || 0;
+  const totalAvailable = products?.filter(p => p && p.stock > 0).length || 0;
+  const totalOutOfStock = products?.filter(p => p && p.stock === 0).length || 0;
+  const totalUnits = products?.reduce((sum, p) => sum + (p?.stock || 0), 0) || 0;
+
   return (
     <div style={styles.container}>
       <div style={styles.header}>
@@ -149,21 +196,19 @@ const ProductList = () => {
 
       <div style={styles.statsGrid}>
         <div style={styles.statCard}>
-          <div style={styles.statValue}>{products.length}</div>
+          <div style={styles.statValue}>{totalProducts}</div>
           <div style={styles.statLabel}>Total productos</div>
         </div>
         <div style={styles.statCard}>
-          <div style={styles.statValue}>{products.filter(p => p.stock > 0).length}</div>
+          <div style={styles.statValue}>{totalAvailable}</div>
           <div style={styles.statLabel}>En existencia</div>
         </div>
         <div style={styles.statCard}>
-          <div style={styles.statValue}>{products.filter(p => p.stock === 0).length}</div>
+          <div style={styles.statValue}>{totalOutOfStock}</div>
           <div style={styles.statLabel}>Sin stock</div>
         </div>
         <div style={styles.statCard}>
-          <div style={styles.statValue}>
-            {products.reduce((sum, p) => sum + p.stock, 0)}
-          </div>
+          <div style={styles.statValue}>{totalUnits}</div>
           <div style={styles.statLabel}>Unidades totales</div>
         </div>
       </div>
@@ -198,7 +243,7 @@ const ProductList = () => {
         </div>
       </div>
 
-      {filteredProducts.length === 0 ? (
+      {!filteredProducts || filteredProducts.length === 0 ? (
         <div style={styles.emptyState}>
           <div style={styles.emptyIcon}>📋</div>
           <h3 style={styles.emptyTitle}>
@@ -231,50 +276,51 @@ const ProductList = () => {
                 <th style={styles.th}>Precio</th>
                 <th style={styles.th}>Stock</th>
                 <th style={styles.th}>Estado</th>
-              </tr>
+                <th style={styles.th}>Acciones</th>
+               </tr>
             </thead>
             <tbody>
               {filteredProducts.map((product, index) => (
-                <tr key={product.id} style={index % 2 === 0 ? styles.tableRow : styles.tableRowAlt}>
+                <tr key={product?.id || index} style={index % 2 === 0 ? styles.tableRow : styles.tableRowAlt}>
                   <td style={styles.td}>
-                    <code style={styles.sku}>{product.sku}</code>
+                    <code style={styles.sku}>{product?.sku || '-'}</code>
                   </td>
                   <td style={styles.td}>
-                    <div style={styles.productName}>{product.name}</div>
+                    <div style={styles.productName}>{product?.name || '-'}</div>
                   </td>
                   <td style={styles.td}>
                     <div style={styles.description}>
-                      {product.description || '-'}
+                      {product?.description || '-'}
                     </div>
                   </td>
                   <td style={styles.td}>
-                    <div style={styles.price}>{formatPrice(product.price)}</div>
+                    <div style={styles.price}>{formatPrice(product?.price)}</div>
                   </td>
                   <td style={styles.td}>
                     <div style={styles.stockControl}>
                       <button
                         onClick={() => updateStock(product, -1)}
-                        disabled={product.stock === 0 || updatingStock[product.id]}
+                        disabled={product?.stock === 0 || updatingStock[product?.id]}
                         style={{
                           ...styles.stockBtn,
-                          ...(product.stock === 0 || updatingStock[product.id] ? styles.stockBtnDisabled : {})
+                          ...((product?.stock === 0 || updatingStock[product?.id]) ? styles.stockBtnDisabled : {})
                         }}
                       >
                         −
                       </button>
                       <div style={styles.stockDisplay}>
-                        <span style={styles.stockNumber}>{product.stock}</span>
+                        <span style={styles.stockNumber}>{product?.stock || 0}</span>
                         <span style={styles.stockUnit}>uds.</span>
-                        {updatingStock[product.id] && (
+                        {updatingStock[product?.id] && (
                           <div style={styles.stockSpinner}></div>
                         )}
                       </div>
                       <button
                         onClick={() => updateStock(product, 1)}
-                        disabled={updatingStock[product.id]}
+                        disabled={updatingStock[product?.id]}
                         style={{
                           ...styles.stockBtn,
-                          ...(updatingStock[product.id] ? styles.stockBtnDisabled : {})
+                          ...(updatingStock[product?.id] ? styles.stockBtnDisabled : {})
                         }}
                       >
                         +
@@ -282,7 +328,29 @@ const ProductList = () => {
                     </div>
                   </td>
                   <td style={styles.td}>
-                    {getAvailabilityBadge(product.stock)}
+                    {getAvailabilityBadge(product?.stock || 0)}
+                  </td>
+                  <td style={styles.td}>
+                    <div style={styles.actions}>
+                      <button
+                        onClick={() => handleEdit(product)}
+                        style={styles.editBtn}
+                        title="Editar producto"
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        onClick={() => handleDelete(product)}
+                        disabled={deletingProduct === product?.id}
+                        style={{
+                          ...styles.deleteBtn,
+                          ...(deletingProduct === product?.id ? styles.deleteBtnDisabled : {})
+                        }}
+                        title="Eliminar producto"
+                      >
+                        {deletingProduct === product?.id ? '...' : '🗑️'}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -460,7 +528,7 @@ const styles = {
   table: {
     width: '100%',
     borderCollapse: 'collapse',
-    minWidth: '900px',
+    minWidth: '1000px',
   },
   
   tableHeader: {
@@ -579,6 +647,36 @@ const styles = {
     borderRadius: '50%',
     animation: 'spin 0.6s linear infinite',
     marginLeft: '0.25rem',
+  },
+  
+  actions: {
+    display: 'flex',
+    gap: '0.5rem',
+  },
+  
+  editBtn: {
+    padding: '0.25rem 0.5rem',
+    backgroundColor: '#e0e7ff',
+    border: 'none',
+    borderRadius: '0.375rem',
+    cursor: 'pointer',
+    fontSize: '1rem',
+    transition: 'all 0.2s ease',
+  },
+  
+  deleteBtn: {
+    padding: '0.25rem 0.5rem',
+    backgroundColor: '#fee2e2',
+    border: 'none',
+    borderRadius: '0.375rem',
+    cursor: 'pointer',
+    fontSize: '1rem',
+    transition: 'all 0.2s ease',
+  },
+  
+  deleteBtnDisabled: {
+    opacity: 0.5,
+    cursor: 'not-allowed',
   },
   
   badgeAvailable: {
@@ -737,7 +835,7 @@ const styles = {
   },
 };
 
-// Agregar animaciones y hover effects
+// Agregar animaciones
 const styleSheet = document.createElement('style');
 styleSheet.textContent = `
   @keyframes spin {
@@ -753,26 +851,17 @@ styleSheet.textContent = `
     transform: translateY(0);
   }
   
-  .${styles.primaryBtn}:hover:not(:disabled) {
-    background-color: #4a2db8;
-  }
-  
-  .${styles.stockBtn}:hover:not(:disabled) {
-    background-color: #e2e8f0;
-    border-color: #cbd5e1;
-  }
-  
-  .${styles.statCard}:hover {
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  }
-  
-  .${styles.tableRow}:hover, .${styles.tableRowAlt}:hover {
-    background-color: #faf9fe;
-  }
-  
   input:focus {
     border-color: #5b3cc4;
     box-shadow: 0 0 0 3px rgba(91, 60, 196, 0.1);
+  }
+  
+  .${styles.editBtn}:hover:not(:disabled) {
+    background-color: #c7d2fe;
+  }
+  
+  .${styles.deleteBtn}:hover:not(:disabled) {
+    background-color: #fecaca;
   }
 `;
 document.head.appendChild(styleSheet);
