@@ -1,12 +1,11 @@
 // src/pages/Products/ProductList.jsx
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 
 const ProductList = () => {
   const navigate = useNavigate();
   const [products, setProducts] = useState([]);
-  const [filteredProducts, setFilteredProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -16,15 +15,13 @@ const ProductList = () => {
     fetchProducts();
   }, []);
 
-  useEffect(() => {
-    filterProducts();
-  }, [searchTerm, products]);
-
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/products');
-      setProducts(response.data.products);
+      // Si hay búsqueda, agregar query param
+      const url = searchTerm ? `/products?search=${searchTerm}` : '/products';
+      const response = await api.get(url);
+      setProducts(response.data.data);
       setError(null);
     } catch (err) {
       console.error('Error:', err);
@@ -34,47 +31,62 @@ const ProductList = () => {
     }
   };
 
-  const filterProducts = () => {
-    if (!searchTerm.trim()) {
-      setFilteredProducts(products);
+  // Buscar cuando cambia el searchTerm
+  useEffect(() => {
+    if (!loading) {
+      fetchProducts();
+    }
+  }, [searchTerm]);
+
+  const updateStock = async (product, delta) => {
+    const newStock = product.stock + delta;
+    if (newStock < 0) return;
+
+    setUpdatingStock(prev => ({ ...prev, [product.sku]: true }));
+
+    try {
+      const response = await api.patch(`/products/${product.sku}/stock`, { stock: newStock });
+
+      // Actualizar localmente
+      setProducts(prev => prev.map(p =>
+        p.sku === product.sku
+          ? { ...p, stock: response.data.data?.stock ?? newStock }
+          : p
+      ));
+    } catch (error) {
+      console.error('Error:', error);
+      alert(error.response?.data?.message || 'Error al actualizar stock');
+    } finally {
+      setUpdatingStock(prev => ({ ...prev, [product.sku]: false }));
+    }
+  };
+
+  const handleDelete = async (product) => {
+    const confirmDelete = window.confirm(
+      `¿Estás seguro de que deseas eliminar el producto "${product.name}" (SKU: ${product.sku})?\n\nEsta acción no se puede deshacer.`
+    );
+
+    if (!confirmDelete) {
       return;
     }
 
-    const term = searchTerm.toLowerCase().trim();
-    const filtered = products.filter(product => 
-      product.name.toLowerCase().includes(term) ||
-      product.sku.toLowerCase().includes(term)
-    );
-    setFilteredProducts(filtered);
+    try {
+      await api.delete(`/products/${product.sku}`);
+      alert('Producto eliminado exitosamente');
+      fetchProducts();
+    } catch (error) {
+      console.error('Error al eliminar:', error);
+      if (error.response && error.response.status === 404) {
+        alert('Producto no encontrado');
+      } else {
+        alert('Error al eliminar el producto');
+      }
+    }
   };
 
-  const updateStock = useCallback(async (product, delta) => {
-    const newStock = product.stock + delta;
-    
-    if (newStock < 0) return;
-    
-    setUpdatingStock(prev => ({ ...prev, [product.id]: true }));
-    
-    try {
-      const response = await api.patch(`/products/${product.sku}/stock`, { 
-        stock: newStock 
-      });
-      
-      setProducts(prevProducts => 
-        prevProducts.map(p => 
-          p.id === product.id 
-            ? { ...p, stock: response.data.product.stock }
-            : p
-        )
-      );
-    } catch (err) {
-      console.error('Error al actualizar stock:', err);
-      alert('No se pudo actualizar el stock. Intente nuevamente.');
-      await fetchProducts();
-    } finally {
-      setUpdatingStock(prev => ({ ...prev, [product.id]: false }));
-    }
-  }, []);
+  const handleEdit = (sku) => {
+    navigate(`/products/edit/${sku}`);
+  };
 
   const getAvailabilityBadge = (stock) => {
     if (stock > 0) {
@@ -99,14 +111,6 @@ const ProductList = () => {
       currency: 'MXN',
       minimumFractionDigits: 2,
     }).format(price);
-  };
-
-  const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value);
-  };
-
-  const clearSearch = () => {
-    setSearchTerm('');
   };
 
   if (loading) {
@@ -168,55 +172,36 @@ const ProductList = () => {
         </div>
       </div>
 
-      <div style={styles.searchSection}>
-        <div style={styles.searchContainer}>
-          <div style={styles.searchIcon}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="10" cy="10" r="7"></circle>
-              <line x1="21" y1="21" x2="15" y2="15"></line>
-            </svg>
-          </div>
-          <input
-            type="text"
-            placeholder="Buscar por nombre o SKU..."
-            value={searchTerm}
-            onChange={handleSearchChange}
-            style={styles.searchInput}
-          />
-          {searchTerm && (
-            <button onClick={clearSearch} style={styles.clearBtn}>
-              ×
-            </button>
-          )}
-        </div>
-        <div style={styles.searchInfo}>
-          {searchTerm && (
-            <span style={styles.searchResultText}>
-              {filteredProducts.length} resultado{filteredProducts.length !== 1 ? 's' : ''}
-            </span>
-          )}
-        </div>
+      {/* BARRA DE BÚSQUEDA */}
+      <div style={styles.searchContainer}>
+        <input
+          type="text"
+          placeholder="Buscar por nombre o SKU..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          style={styles.searchInput}
+        />
+        {searchTerm && (
+          <button onClick={() => setSearchTerm('')} style={styles.clearSearchBtn}>
+            ✕
+          </button>
+        )}
       </div>
 
-      {filteredProducts.length === 0 ? (
+      {products.length === 0 ? (
         <div style={styles.emptyState}>
           <div style={styles.emptyIcon}>📋</div>
           <h3 style={styles.emptyTitle}>
-            {searchTerm ? 'No se encontraron productos' : 'Catálogo vacío'}
+            {searchTerm ? 'No se encontraron resultados' : 'Catálogo vacío'}
           </h3>
           <p style={styles.emptyText}>
-            {searchTerm 
+            {searchTerm
               ? `No hay productos que coincidan con "${searchTerm}"`
               : 'No hay productos registrados en el sistema'}
           </p>
           {!searchTerm && (
             <button onClick={() => navigate('/products/new')} style={styles.emptyBtn}>
               Registrar primer producto
-            </button>
-          )}
-          {searchTerm && (
-            <button onClick={clearSearch} style={styles.emptyBtn}>
-              Limpiar búsqueda
             </button>
           )}
         </div>
@@ -231,11 +216,12 @@ const ProductList = () => {
                 <th style={styles.th}>Precio</th>
                 <th style={styles.th}>Stock</th>
                 <th style={styles.th}>Estado</th>
+                <th style={styles.th}>Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {filteredProducts.map((product, index) => (
-                <tr key={product.id} style={index % 2 === 0 ? styles.tableRow : styles.tableRowAlt}>
+              {products.map((product, index) => (
+                <tr key={product.sku} style={index % 2 === 0 ? styles.tableRow : styles.tableRowAlt}>
                   <td style={styles.td}>
                     <code style={styles.sku}>{product.sku}</code>
                   </td>
@@ -254,35 +240,45 @@ const ProductList = () => {
                     <div style={styles.stockControl}>
                       <button
                         onClick={() => updateStock(product, -1)}
-                        disabled={product.stock === 0 || updatingStock[product.id]}
-                        style={{
-                          ...styles.stockBtn,
-                          ...(product.stock === 0 || updatingStock[product.id] ? styles.stockBtnDisabled : {})
-                        }}
+                        disabled={product.stock === 0 || updatingStock[product.sku]}
+                        style={styles.stockBtn}
                       >
                         −
                       </button>
-                      <div style={styles.stockDisplay}>
-                        <span style={styles.stockNumber}>{product.stock}</span>
-                        <span style={styles.stockUnit}>uds.</span>
-                        {updatingStock[product.id] && (
-                          <div style={styles.stockSpinner}></div>
-                        )}
-                      </div>
+                      <span style={styles.stockNumber}>{product.stock}</span>
+                      <span style={styles.stockUnit}>uds.</span>
                       <button
                         onClick={() => updateStock(product, 1)}
-                        disabled={updatingStock[product.id]}
-                        style={{
-                          ...styles.stockBtn,
-                          ...(updatingStock[product.id] ? styles.stockBtnDisabled : {})
-                        }}
+                        disabled={updatingStock[product.sku]}
+                        style={styles.stockBtn}
                       >
                         +
                       </button>
+                      {updatingStock[product.sku] && (
+                        <span style={styles.stockSpinner}></span>
+                      )}
                     </div>
                   </td>
                   <td style={styles.td}>
                     {getAvailabilityBadge(product.stock)}
+                  </td>
+                  <td style={styles.td}>
+                    <div style={styles.actions}>
+                      <button
+                        onClick={() => handleEdit(product.sku)}
+                        style={styles.editBtn}
+                        title="Editar producto"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => handleDelete(product)}
+                        style={styles.deleteBtn}
+                        title="Eliminar producto"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -301,7 +297,7 @@ const styles = {
     padding: '2rem',
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
   },
-  
+
   header: {
     maxWidth: '1280px',
     margin: '0 auto 2rem auto',
@@ -313,11 +309,11 @@ const styles = {
     paddingBottom: '1.5rem',
     borderBottom: '1px solid #e2e8f0',
   },
-  
+
   headerContent: {
     flex: 1,
   },
-  
+
   title: {
     fontSize: '1.875rem',
     fontWeight: '600',
@@ -325,13 +321,13 @@ const styles = {
     marginBottom: '0.5rem',
     letterSpacing: '-0.025em',
   },
-  
+
   subtitle: {
     fontSize: '0.875rem',
     color: '#64748b',
     fontWeight: '400',
   },
-  
+
   primaryBtn: {
     padding: '0.625rem 1.5rem',
     backgroundColor: '#5b3cc4',
@@ -347,12 +343,12 @@ const styles = {
     transition: 'all 0.2s ease',
     boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
   },
-  
+
   btnIcon: {
     fontSize: '1.125rem',
     fontWeight: '600',
   },
-  
+
   statsGrid: {
     maxWidth: '1280px',
     margin: '0 auto 2rem auto',
@@ -360,7 +356,7 @@ const styles = {
     gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
     gap: '1rem',
   },
-  
+
   statCard: {
     backgroundColor: 'white',
     padding: '1.5rem',
@@ -369,7 +365,7 @@ const styles = {
     boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
     transition: 'box-shadow 0.2s ease',
   },
-  
+
   statValue: {
     fontSize: '2rem',
     fontWeight: '600',
@@ -377,7 +373,7 @@ const styles = {
     marginBottom: '0.5rem',
     letterSpacing: '-0.025em',
   },
-  
+
   statLabel: {
     fontSize: '0.75rem',
     fontWeight: '500',
@@ -385,68 +381,71 @@ const styles = {
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
   },
-  
-  searchSection: {
+
+  // Estilos de búsqueda
+  searchContainer: {
     maxWidth: '1280px',
     margin: '0 auto 1.5rem auto',
-  },
-  
-  searchContainer: {
     position: 'relative',
-    marginBottom: '0.5rem',
   },
-  
-  searchIcon: {
-    position: 'absolute',
-    left: '1rem',
-    top: '50%',
-    transform: 'translateY(-50%)',
-    color: '#94a3b8',
-    display: 'flex',
-    alignItems: 'center',
-    pointerEvents: 'none',
-  },
-  
+
   searchInput: {
     width: '100%',
-    padding: '0.75rem 2.5rem 0.75rem 2.5rem',
-    fontSize: '0.875rem',
+    padding: '0.75rem 2.5rem 0.75rem 1rem',
     border: '1px solid #e2e8f0',
     borderRadius: '0.5rem',
+    fontSize: '0.875rem',
     backgroundColor: 'white',
-    color: '#1e293b',
-    transition: 'all 0.2s ease',
     outline: 'none',
+    transition: 'all 0.2s ease',
   },
-  
-  clearBtn: {
+
+  clearSearchBtn: {
     position: 'absolute',
-    right: '1rem',
+    right: '0.75rem',
     top: '50%',
     transform: 'translateY(-50%)',
     background: 'none',
     border: 'none',
-    fontSize: '1.25rem',
+    fontSize: '1rem',
     color: '#94a3b8',
     cursor: 'pointer',
     padding: '0.25rem',
+  },
+
+  stockControl: {
     display: 'flex',
     alignItems: 'center',
+    gap: '0.5rem',
+    flexWrap: 'wrap',
+  },
+
+  stockBtn: {
+    width: '28px',
+    height: '28px',
+    backgroundColor: '#f1f5f9',
+    border: '1px solid #e2e8f0',
+    borderRadius: '0.375rem',
+    fontSize: '1rem',
+    fontWeight: '600',
+    color: '#5b3cc4',
+    cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: '0.25rem',
-    transition: 'color 0.2s ease',
+    transition: 'all 0.2s ease',
   },
-  
-  searchInfo: {
-    display: 'flex',
-    justifyContent: 'flex-end',
+
+  stockSpinner: {
+    width: '14px',
+    height: '14px',
+    border: '2px solid #e2e8f0',
+    borderTopColor: '#5b3cc4',
+    borderRadius: '50%',
+    animation: 'spin 0.6s linear infinite',
+    display: 'inline-block',
   },
-  
-  searchResultText: {
-    fontSize: '0.75rem',
-    color: '#64748b',
-  },
-  
+
   tableContainer: {
     maxWidth: '1280px',
     margin: '0 auto',
@@ -456,18 +455,18 @@ const styles = {
     overflow: 'auto',
     boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
   },
-  
+
   table: {
     width: '100%',
     borderCollapse: 'collapse',
-    minWidth: '900px',
+    minWidth: '1000px',
   },
-  
+
   tableHeader: {
     backgroundColor: '#f8fafc',
     borderBottom: '1px solid #e2e8f0',
   },
-  
+
   th: {
     padding: '1rem 1rem',
     textAlign: 'left',
@@ -477,24 +476,24 @@ const styles = {
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
   },
-  
+
   tableRow: {
     borderBottom: '1px solid #f1f5f9',
     transition: 'background-color 0.2s ease',
   },
-  
+
   tableRowAlt: {
     backgroundColor: '#fefefe',
     borderBottom: '1px solid #f1f5f9',
     transition: 'background-color 0.2s ease',
   },
-  
+
   td: {
     padding: '1rem 1rem',
     fontSize: '0.875rem',
     color: '#334155',
   },
-  
+
   sku: {
     fontFamily: "'SF Mono', 'Monaco', 'Cascadia Code', monospace",
     fontSize: '0.75rem',
@@ -503,12 +502,12 @@ const styles = {
     borderRadius: '0.375rem',
     color: '#475569',
   },
-  
+
   productName: {
     fontWeight: '500',
     color: '#1e293b',
   },
-  
+
   description: {
     fontSize: '0.8125rem',
     color: '#64748b',
@@ -517,70 +516,23 @@ const styles = {
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
   },
-  
+
   price: {
     fontWeight: '600',
     color: '#5b3cc4',
   },
-  
-  stockControl: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.5rem',
-  },
-  
-  stockBtn: {
-    width: '1.75rem',
-    height: '1.75rem',
-    backgroundColor: '#f1f5f9',
-    border: '1px solid #e2e8f0',
-    borderRadius: '0.375rem',
-    color: '#5b3cc4',
-    fontSize: '1rem',
-    fontWeight: '600',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    transition: 'all 0.2s ease',
-  },
-  
-  stockBtnDisabled: {
-    opacity: 0.5,
-    cursor: 'not-allowed',
-    backgroundColor: '#f8fafc',
-    color: '#94a3b8',
-  },
-  
-  stockDisplay: {
-    display: 'flex',
-    alignItems: 'baseline',
-    gap: '0.25rem',
-    minWidth: '3.5rem',
-    justifyContent: 'center',
-  },
-  
+
   stockNumber: {
     fontWeight: '600',
     color: '#1e293b',
     fontSize: '0.875rem',
   },
-  
+
   stockUnit: {
     fontSize: '0.75rem',
     color: '#94a3b8',
   },
-  
-  stockSpinner: {
-    width: '0.875rem',
-    height: '0.875rem',
-    border: '2px solid #e2e8f0',
-    borderTopColor: '#5b3cc4',
-    borderRadius: '50%',
-    animation: 'spin 0.6s linear infinite',
-    marginLeft: '0.25rem',
-  },
-  
+
   badgeAvailable: {
     display: 'inline-flex',
     alignItems: 'center',
@@ -594,7 +546,7 @@ const styles = {
     color: '#166534',
     width: 'fit-content',
   },
-  
+
   badgeUnavailable: {
     display: 'inline-flex',
     alignItems: 'center',
@@ -608,7 +560,7 @@ const styles = {
     color: '#991b1b',
     width: 'fit-content',
   },
-  
+
   badgeDotAvailable: {
     width: '0.5rem',
     height: '0.5rem',
@@ -616,7 +568,7 @@ const styles = {
     borderRadius: '50%',
     display: 'inline-block',
   },
-  
+
   badgeDotUnavailable: {
     width: '0.5rem',
     height: '0.5rem',
@@ -624,7 +576,36 @@ const styles = {
     borderRadius: '50%',
     display: 'inline-block',
   },
-  
+
+  actions: {
+    display: 'flex',
+    gap: '0.5rem',
+  },
+
+  editBtn: {
+    padding: '0.375rem 0.875rem',
+    backgroundColor: '#f1f5f9',
+    color: '#475569',
+    border: '1px solid #e2e8f0',
+    borderRadius: '0.375rem',
+    fontSize: '0.75rem',
+    fontWeight: '500',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+  },
+
+  deleteBtn: {
+    padding: '0.375rem 0.875rem',
+    backgroundColor: '#fef2f2',
+    color: '#dc2626',
+    border: '1px solid #fecaca',
+    borderRadius: '0.375rem',
+    fontSize: '0.75rem',
+    fontWeight: '500',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+  },
+
   loadingCard: {
     maxWidth: '28rem',
     margin: '8rem auto',
@@ -635,7 +616,7 @@ const styles = {
     border: '1px solid #e2e8f0',
     boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
   },
-  
+
   spinner: {
     width: '2.5rem',
     height: '2.5rem',
@@ -645,12 +626,12 @@ const styles = {
     animation: 'spin 0.8s linear infinite',
     margin: '0 auto 1rem',
   },
-  
+
   loadingText: {
     color: '#64748b',
     fontSize: '0.875rem',
   },
-  
+
   errorCard: {
     maxWidth: '28rem',
     margin: '8rem auto',
@@ -661,7 +642,7 @@ const styles = {
     border: '1px solid #fecaca',
     boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
   },
-  
+
   errorIcon: {
     width: '3rem',
     height: '3rem',
@@ -675,13 +656,13 @@ const styles = {
     fontWeight: 'bold',
     margin: '0 auto 1rem',
   },
-  
+
   errorText: {
     color: '#991b1b',
     marginBottom: '1.5rem',
     fontSize: '0.875rem',
   },
-  
+
   retryBtn: {
     padding: '0.5rem 1.5rem',
     backgroundColor: '#5b3cc4',
@@ -693,7 +674,7 @@ const styles = {
     cursor: 'pointer',
     transition: 'background-color 0.2s ease',
   },
-  
+
   emptyState: {
     maxWidth: '32rem',
     margin: '4rem auto',
@@ -704,26 +685,26 @@ const styles = {
     border: '1px solid #e2e8f0',
     boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
   },
-  
+
   emptyIcon: {
     fontSize: '3rem',
     marginBottom: '1rem',
     opacity: 0.5,
   },
-  
+
   emptyTitle: {
     fontSize: '1.25rem',
     fontWeight: '500',
     color: '#1e293b',
     marginBottom: '0.5rem',
   },
-  
+
   emptyText: {
     color: '#64748b',
     fontSize: '0.875rem',
     marginBottom: '1.5rem',
   },
-  
+
   emptyBtn: {
     padding: '0.625rem 1.5rem',
     backgroundColor: '#5b3cc4',
@@ -737,42 +718,53 @@ const styles = {
   },
 };
 
-// Agregar animaciones y hover effects
 const styleSheet = document.createElement('style');
 styleSheet.textContent = `
   @keyframes spin {
     to { transform: rotate(360deg); }
   }
   
-  button:hover:not(:disabled) {
+  input:focus {
+    border-color: #5b3cc4;
+    box-shadow: 0 0 0 3px rgba(91, 60, 196, 0.1);
+  }
+  
+  ${styles.editBtn}:hover {
+    background-color: #e2e8f0;
+    transform: translateY(-1px);
+  }
+  
+  ${styles.deleteBtn}:hover {
+    background-color: #fecaca;
+    transform: translateY(-1px);
+  }
+  
+  ${styles.primaryBtn}:hover {
+    background-color: #4a2db8;
     transform: translateY(-1px);
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   }
   
-  button:active:not(:disabled) {
-    transform: translateY(0);
-  }
-  
-  .${styles.primaryBtn}:hover:not(:disabled) {
-    background-color: #4a2db8;
-  }
-  
-  .${styles.stockBtn}:hover:not(:disabled) {
+  ${styles.stockBtn}:hover:not(:disabled) {
     background-color: #e2e8f0;
-    border-color: #cbd5e1;
+    transform: scale(1.05);
   }
   
-  .${styles.statCard}:hover {
+  ${styles.stockBtn}:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  ${styles.statCard}:hover {
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   }
   
-  .${styles.tableRow}:hover, .${styles.tableRowAlt}:hover {
+  ${styles.tableRow}:hover, ${styles.tableRowAlt}:hover {
     background-color: #faf9fe;
   }
   
-  input:focus {
-    border-color: #5b3cc4;
-    box-shadow: 0 0 0 3px rgba(91, 60, 196, 0.1);
+  button:active {
+    transform: translateY(0);
   }
 `;
 document.head.appendChild(styleSheet);

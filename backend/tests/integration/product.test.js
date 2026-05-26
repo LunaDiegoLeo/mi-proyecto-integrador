@@ -33,6 +33,9 @@ describe('POST /api/products', () => {
 
     expect(response.body.success).toBe(true);
     expect(response.body.data.sku).toBe(newProduct.sku);
+    expect(response.body.data.name).toBe(newProduct.name);
+    expect(response.body.data.price).toBe(newProduct.price);
+    expect(response.body.data.stock).toBe(newProduct.stock);
     expect(response.body.data.disponibilidad).toBe('disponible');
   });
 
@@ -73,6 +76,44 @@ describe('POST /api/products', () => {
 
     expect(response.body.success).toBe(true);
     expect(response.body.data.disponibilidad).toBe('no disponible');
+  });
+
+  test('Debe rechazar producto sin campos obligatorios', async () => {
+    const response = await request(app)
+      .post('/api/products')
+      .send({ sku: 'TEST-004' })
+      .expect(400);
+
+    expect(response.body.success).toBe(false);
+    expect(response.body.errors).toBeDefined();
+  });
+
+  test('Debe rechazar producto con precio negativo', async () => {
+    const response = await request(app)
+      .post('/api/products')
+      .send({
+        sku: 'TEST-005',
+        name: 'Producto',
+        price: -10,
+        stock: 5
+      })
+      .expect(400);
+
+    expect(response.body.success).toBe(false);
+  });
+
+  test('Debe rechazar producto con stock negativo', async () => {
+    const response = await request(app)
+      .post('/api/products')
+      .send({
+        sku: 'TEST-006',
+        name: 'Producto',
+        price: 50,
+        stock: -5
+      })
+      .expect(400);
+
+    expect(response.body.success).toBe(false);
   });
 });
 
@@ -117,8 +158,7 @@ describe('GET /api/products', () => {
 
     expect(response.body.success).toBe(true);
     expect(response.body.data).toHaveLength(2);
-    expect(response.body.data[0].name).toContain('Laptop');
-    expect(response.body.data[1].name).toContain('Laptop');
+    expect(response.body.data.every(p => p.name.toLowerCase().includes('laptop'))).toBe(true);
   });
 
   test('Debe filtrar productos por SKU usando search query param', async () => {
@@ -148,6 +188,20 @@ describe('GET /api/products', () => {
 
     expect(response.body.success).toBe(true);
     expect(response.body.data).toHaveLength(1);
+  });
+
+  test('Debe retornar lista vacía si no hay coincidencias en la búsqueda', async () => {
+    await Product.bulkCreate([
+      { sku: 'PROD-001', name: 'Producto 1', price: 10.00, stock: 5 }
+    ]);
+
+    const response = await request(app)
+      .get('/api/products?search=noexiste')
+      .expect(200);
+
+    expect(response.body.success).toBe(true);
+    expect(response.body.data).toEqual([]);
+    expect(response.body.count).toBe(0);
   });
 });
 
