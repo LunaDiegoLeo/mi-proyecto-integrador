@@ -46,10 +46,10 @@ const ProductList = () => {
 
     try {
       const response = await api.patch(`/products/${product.sku}/stock`, { stock: newStock });
-      
+
       // Actualizar localmente
-      setProducts(prev => prev.map(p => 
-        p.sku === product.sku 
+      setProducts(prev => prev.map(p =>
+        p.sku === product.sku
           ? { ...p, stock: response.data.data?.stock ?? newStock }
           : p
       ));
@@ -195,7 +195,7 @@ const ProductList = () => {
             {searchTerm ? 'No se encontraron resultados' : 'Catálogo vacío'}
           </h3>
           <p style={styles.emptyText}>
-            {searchTerm 
+            {searchTerm
               ? `No hay productos que coincidan con "${searchTerm}"`
               : 'No hay productos registrados en el sistema'}
           </p>
