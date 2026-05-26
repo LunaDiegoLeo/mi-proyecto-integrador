@@ -4,6 +4,8 @@ const cors = require('cors');
 const morgan = require('morgan');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
+const authRoutes = require('./routes/authRoutes');
+const cartRoutes = require('./routes/cartRoutes');
 
 const app = express();
 
@@ -18,6 +20,8 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customCss: '.swagger-ui .topbar { display: none }',
   customSiteTitle: 'API Inventario - Documentación'
 }));
+app.use('/api/auth', authRoutes);
+app.use('/api/cart', cartRoutes);
 
 // Ruta raíz de bienvenida
 app.get('/', (req, res) => {
