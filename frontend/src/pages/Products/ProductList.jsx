@@ -46,10 +46,10 @@ const ProductList = () => {
 
     try {
       const response = await api.patch(`/products/${product.sku}/stock`, { stock: newStock });
-      
+
       // Actualizar localmente
-      setProducts(prev => prev.map(p => 
-        p.sku === product.sku 
+      setProducts(prev => prev.map(p =>
+        p.sku === product.sku
           ? { ...p, stock: response.data.data?.stock ?? newStock }
           : p
       ));
@@ -143,12 +143,32 @@ const ProductList = () => {
       <div style={styles.header}>
         <div style={styles.headerContent}>
           <h1 style={styles.title}>Gestión de Inventario</h1>
-          <p style={styles.subtitle}>Catálogo de productos y control de existencias</p>
+          <p style={styles.subtitle}>
+            Catálogo de productos y control de existencias
+          </p>
         </div>
-        <button onClick={() => navigate('/products/new')} style={styles.primaryBtn}>
-          <span style={styles.btnIcon}>+</span>
-          Nuevo producto
-        </button>
+
+        <div style={styles.headerButtons}>
+          <button
+            onClick={() => navigate('/products/create')}
+            style={styles.primaryBtn}
+          >
+            <span style={styles.btnIcon}>+</span>
+            Nuevo producto
+          </button>
+
+          <button
+            onClick={() => {
+              localStorage.removeItem('user');
+              localStorage.removeItem('token');
+
+              navigate('/');
+            }}
+            style={styles.logoutBtn}
+          >
+            Cerrar sesión
+          </button>
+        </div>
       </div>
 
       <div style={styles.statsGrid}>
@@ -195,12 +215,12 @@ const ProductList = () => {
             {searchTerm ? 'No se encontraron resultados' : 'Catálogo vacío'}
           </h3>
           <p style={styles.emptyText}>
-            {searchTerm 
+            {searchTerm
               ? `No hay productos que coincidan con "${searchTerm}"`
               : 'No hay productos registrados en el sistema'}
           </p>
           {!searchTerm && (
-            <button onClick={() => navigate('/products/new')} style={styles.emptyBtn}>
+            <button onClick={() => navigate('/products/create')} style={styles.emptyBtn}>
               Registrar primer producto
             </button>
           )}
@@ -211,6 +231,7 @@ const ProductList = () => {
             <thead>
               <tr style={styles.tableHeader}>
                 <th style={styles.th}>SKU</th>
+                <th style={styles.th}>Imagen</th>
                 <th style={styles.th}>Producto</th>
                 <th style={styles.th}>Descripción</th>
                 <th style={styles.th}>Precio</th>
@@ -224,6 +245,15 @@ const ProductList = () => {
                 <tr key={product.sku} style={index % 2 === 0 ? styles.tableRow : styles.tableRowAlt}>
                   <td style={styles.td}>
                     <code style={styles.sku}>{product.sku}</code>
+                  </td>
+                  <td style={styles.td}>
+                    <img
+                      src={
+                        product.imageUrl ||
+                        'https://via.placeholder.com/80'
+                      }
+                      style={styles.productImage}
+                    />
                   </td>
                   <td style={styles.td}>
                     <div style={styles.productName}>{product.name}</div>
@@ -312,6 +342,27 @@ const styles = {
 
   headerContent: {
     flex: 1,
+  },
+  headerButtons: {
+    display: 'flex',
+    gap: '1rem',
+    alignItems: 'center'
+  },
+  logoutBtn: {
+    padding: '0.7rem 1.3rem',
+    border: 'none',
+    borderRadius: '12px',
+    background: '#ef4444',
+    color: 'white',
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: '0.2s'
+  },
+  productImage: {
+    width: '70px',
+    height: '70px',
+    objectFit: 'cover',
+    borderRadius: '12px'
   },
 
   title: {
