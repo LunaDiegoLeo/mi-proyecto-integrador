@@ -20,7 +20,7 @@ function LoginPage() {
       setLoading(true);
 
       const response = await axios.post(
-        'http://localhost:3000/api/auth/login',
+        'https://mi-proyecto-integrador.onrender.com/api/auth/login',
         form
       );
 

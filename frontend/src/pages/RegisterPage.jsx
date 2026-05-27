@@ -16,7 +16,7 @@ function RegisterPage() {
 
     try {
       await axios.post(
-        'http://localhost:3000/api/auth/register',
+        'https://mi-proyecto-integrador.onrender.com/api/auth/register',
         form
       );
 
