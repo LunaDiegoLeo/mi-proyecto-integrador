@@ -365,6 +365,7 @@ const styles = {
     borderRadius: '12px'
   },
 
+
   title: {
     fontSize: '1.875rem',
     fontWeight: '600',
