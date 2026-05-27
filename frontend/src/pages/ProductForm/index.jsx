@@ -1,478 +1,417 @@
-// src/pages/ProductForm/index.jsx
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../../services/api';
 
 const ProductForm = () => {
+
   const navigate = useNavigate();
+
   const { sku } = useParams();
+
   const isEditMode = !!sku;
 
-  const [formData, setFormData] = useState({
-    sku: '',
-    name: '',
-    description: '',
-    price: '',
-    stock: '',
+  const [form, setForm] = useState({
+    sku:'',
+    name:'',
+    description:'',
+    price:'',
+    stock:'',
+    imageUrl:''
   });
+
   const [errors, setErrors] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [loading, setLoading] = useState(isEditMode);
+
+  const [isSubmitting, setIsSubmitting] =
+    useState(false);
+
+  const [loading, setLoading] =
+    useState(isEditMode);
 
   useEffect(() => {
-    if (isEditMode) {
+
+    if(isEditMode){
       fetchProduct();
     }
-  }, [isEditMode, sku]);
+
+  }, [sku]);
 
   const fetchProduct = async () => {
+
     try {
-      // ❌ ANTES: const response = await api.get(`/products/sku/${sku}`);
-      // ✅ DESPUÉS:
-      const response = await api.get(`/products/${sku}`);
 
-      // También corrige el acceso a los datos
-      const product = response.data.data; // El backend retorna { success: true, data: {...} }
+      const response =
+        await api.get(`/products/${sku}`);
 
-      setFormData({
-        sku: product.sku,
-        name: product.name,
-        description: product.description || '',
-        price: product.price,
-        stock: product.stock,
+      const product =
+        response.data.data;
+
+      setForm({
+        sku:product.sku,
+        name:product.name,
+        description:
+          product.description || '',
+        price:product.price,
+        stock:product.stock,
+        imageUrl:
+          product.imageUrl || ''
       });
-    } catch (error) {
-      console.error('Error al cargar producto:', error);
-      alert('No se pudo cargar el producto para editar');
-      navigate('/');
+
+    } catch(error){
+
+      console.log(error);
+
+      alert(
+        'No se pudo cargar el producto'
+      );
+
+      navigate('/products');
+
     } finally {
+
       setLoading(false);
+
     }
+
   };
 
   const validateForm = () => {
+
     const newErrors = {};
 
-    if (!isEditMode && !formData.sku.trim()) {
-      newErrors.sku = 'SKU es obligatorio';
+    if(
+      !isEditMode &&
+      !form.sku.trim()
+    ){
+      newErrors.sku =
+        'SKU obligatorio';
     }
 
-    if (!formData.name.trim()) {
-      newErrors.name = 'Nombre es obligatorio';
+    if(!form.name.trim()){
+      newErrors.name =
+        'Nombre obligatorio';
     }
 
-    const price = parseFloat(formData.price);
-    if (!formData.price) {
-      newErrors.price = 'Precio es obligatorio';
-    } else if (isNaN(price) || price <= 0) {
-      newErrors.price = 'Precio debe ser mayor a 0';
+    if(
+      !form.price ||
+      parseFloat(form.price) <= 0
+    ){
+      newErrors.price =
+        'Precio inválido';
     }
 
-    // Solo validar stock en modo creación
-    if (!isEditMode) {
-      const stock = parseInt(formData.stock);
-      if (formData.stock === '' || formData.stock === null || formData.stock === undefined) {
-        newErrors.stock = 'Stock es obligatorio';
-      } else if (isNaN(stock) || stock < 0) {
-        newErrors.stock = 'Stock debe ser mayor o igual a 0';
-      }
+    if(
+      !isEditMode &&
+      (
+        form.stock === '' ||
+        parseInt(form.stock) < 0
+      )
+    ){
+      newErrors.stock =
+        'Stock inválido';
     }
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+
+    return (
+      Object.keys(newErrors).length === 0
+    );
+
   };
 
   const handleChange = (e) => {
+
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
-    }
+
+    setForm({
+      ...form,
+      [name]:value
+    });
+
   };
 
   const handleSubmit = async (e) => {
+
     e.preventDefault();
 
-    if (!validateForm()) {
+    if(!validateForm()){
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      if (isEditMode) {
-        // En modo edición, NO enviamos sku ni stock (solo name, description, price)
-        const payload = {
-          name: formData.name.trim(),
-          description: formData.description.trim() || undefined,
-          price: parseFloat(formData.price),
-        };
-        await api.put(`/products/${formData.sku}`, payload);
-        alert('Producto actualizado exitosamente');
+
+      if(isEditMode){
+
+        await api.put(
+          `/products/${form.sku}`,
+          {
+            name:form.name,
+            description:
+              form.description,
+            price:
+              parseFloat(form.price),
+            imageUrl:
+              form.imageUrl
+          }
+        );
+
+        alert(
+          'Producto actualizado'
+        );
+
       } else {
-        // En modo creación, enviamos todos los campos
-        const payload = {
-          sku: formData.sku.trim(),
-          name: formData.name.trim(),
-          description: formData.description.trim() || undefined,
-          price: parseFloat(formData.price),
-          stock: parseInt(formData.stock),
-        };
-        await api.post('/products', payload);
-        alert('Producto registrado exitosamente');
+
+        await api.post(
+          '/products',
+          {
+            sku:form.sku,
+            name:form.name,
+            description:
+              form.description,
+            price:
+              parseFloat(form.price),
+            stock:
+              parseInt(form.stock),
+            imageUrl:
+              form.imageUrl
+          }
+        );
+
+        alert(
+          'Producto creado'
+        );
+
       }
 
-      navigate('/');
-    } catch (error) {
-      console.error('Error:', error);
-      if (error.response) {
-        if (error.response.status === 409) {
-          alert('El SKU ya existe en el sistema');
-        } else if (error.response.status === 400) {
-          const apiErrors = error.response.data.errors;
-          if (Array.isArray(apiErrors)) {
-            const messages = apiErrors.map(err => `${err.field}: ${err.message}`).join('\n');
-            alert(`Errores de validación:\n${messages}`);
-          } else {
-            alert(`Error: ${error.response.data.message || 'Datos inválidos'}`);
-          }
-        } else if (error.response.status === 404) {
-          alert('Producto no encontrado');
-        } else {
-          alert(`Error: ${error.response.data.message || 'No se pudo completar la operación'}`);
-        }
-      } else if (error.request) {
-        alert('Error de conexión: No se puede conectar al servidor');
-      } else {
-        alert(`Error: ${error.message}`);
-      }
+      navigate('/products');
+
+    } catch(error){
+
+      console.log(error);
+
+      alert(
+        error.response?.data?.message ||
+        'Error'
+      );
+
     } finally {
+
       setIsSubmitting(false);
+
     }
+
   };
 
-  if (loading) {
+  if(loading){
+
     return (
-      <div style={styles.container}>
-        <div style={styles.loadingCard}>
-          <div style={styles.spinner}></div>
-          <p style={styles.loadingText}>Cargando producto...</p>
-        </div>
+      <div style={styles.loading}>
+        Cargando...
       </div>
     );
+
   }
 
   return (
+
     <div style={styles.container}>
+
       <div style={styles.card}>
-        <button onClick={() => navigate('/')} style={styles.backButton}>
-          ← Volver al listado
+
+        <button
+          onClick={() =>
+            navigate('/products')
+          }
+          style={styles.backButton}
+        >
+          ← Volver
         </button>
 
         <h1 style={styles.title}>
-          {isEditMode ? 'Editar Producto' : 'Registrar Nuevo Producto'}
+          {
+            isEditMode
+              ? 'Editar Producto'
+              : 'Nuevo Producto'
+          }
         </h1>
 
-        <form onSubmit={handleSubmit} style={styles.form}>
-          <div style={styles.field}>
-            <label style={styles.label}>SKU *</label>
-            <input
-              type="text"
-              name="sku"
-              value={formData.sku}
-              onChange={handleChange}
-              disabled={isEditMode}
-              style={{
-                ...styles.input,
-                ...(errors.sku && styles.inputError),
-                ...(isEditMode && styles.inputDisabled)
-              }}
-              placeholder="Ej: PROD-001"
-            />
-            {errors.sku && <span style={styles.errorText}>{errors.sku}</span>}
-            {isEditMode && (
-              <span style={styles.hintText}>El SKU no puede modificarse</span>
-            )}
-          </div>
+        <form
+          onSubmit={handleSubmit}
+          style={styles.form}
+        >
 
-          <div style={styles.field}>
-            <label style={styles.label}>Nombre *</label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              style={{ ...styles.input, ...(errors.name && styles.inputError) }}
-              placeholder="Nombre del producto"
-            />
-            {errors.name && <span style={styles.errorText}>{errors.name}</span>}
-          </div>
+          <input
+            type="text"
+            name="sku"
+            placeholder="SKU"
+            value={form.sku}
+            onChange={handleChange}
+            disabled={isEditMode}
+            style={styles.input}
+          />
 
-          <div style={styles.field}>
-            <label style={styles.label}>Descripción</label>
-            <textarea
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              style={styles.textarea}
-              placeholder="Descripción opcional"
-              rows="3"
-            />
-          </div>
+          <input
+            type="text"
+            name="name"
+            placeholder="Nombre"
+            value={form.name}
+            onChange={handleChange}
+            style={styles.input}
+          />
 
-          <div style={styles.row}>
-            <div style={{ ...styles.field, flex: 1 }}>
-              <label style={styles.label}>Precio *</label>
+          <textarea
+            name="description"
+            placeholder="Descripción"
+            value={form.description}
+            onChange={handleChange}
+            style={styles.textarea}
+          />
+
+          <input
+            type="text"
+            name="imageUrl"
+            placeholder="URL imagen"
+            value={form.imageUrl}
+            onChange={handleChange}
+            style={styles.input}
+          />
+
+          {
+            form.imageUrl &&
+            (
+              <img
+                src={form.imageUrl}
+                style={styles.preview}
+              />
+            )
+          }
+
+          <input
+            type="number"
+            name="price"
+            placeholder="Precio"
+            value={form.price}
+            onChange={handleChange}
+            style={styles.input}
+          />
+
+          {
+            !isEditMode &&
+            (
               <input
                 type="number"
-                name="price"
-                value={formData.price}
+                name="stock"
+                placeholder="Stock"
+                value={form.stock}
                 onChange={handleChange}
-                style={{ ...styles.input, ...(errors.price && styles.inputError) }}
-                placeholder="0.00"
-                step="0.01"
-                min="0.01"
+                style={styles.input}
               />
-              {errors.price && <span style={styles.errorText}>{errors.price}</span>}
-            </div>
+            )
+          }
 
-            {!isEditMode && (
-              <div style={{ ...styles.field, flex: 1 }}>
-                <label style={styles.label}>Stock *</label>
-                <input
-                  type="number"
-                  name="stock"
-                  value={formData.stock}
-                  onChange={handleChange}
-                  style={{ ...styles.input, ...(errors.stock && styles.inputError) }}
-                  placeholder="0"
-                  step="1"
-                  min="0"
-                />
-                {errors.stock && <span style={styles.errorText}>{errors.stock}</span>}
-              </div>
-            )}
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            style={styles.submit}
+          >
 
-            {isEditMode && (
-              <div style={{ ...styles.field, flex: 1 }}>
-                <label style={styles.label}>Stock actual</label>
-                <input
-                  type="number"
-                  value={formData.stock}
-                  disabled
-                  style={{ ...styles.input, ...styles.inputDisabled }}
-                />
-                <span style={styles.hintText}>
-                  El stock se ajusta desde el inventario en el listado
-                </span>
-              </div>
-            )}
-          </div>
+            {
+              isSubmitting
+                ? 'Guardando...'
+                : (
+                  isEditMode
+                    ? 'Actualizar'
+                    : 'Crear Producto'
+                )
+            }
 
-          <div style={styles.actions}>
-            <button
-              type="button"
-              onClick={() => navigate('/')}
-              style={styles.cancelButton}
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              style={{ ...styles.submitButton, ...(isSubmitting && styles.disabledButton) }}
-            >
-              {isSubmitting
-                ? (isEditMode ? 'Actualizando...' : 'Registrando...')
-                : (isEditMode ? 'Actualizar Producto' : 'Registrar Producto')
-              }
-            </button>
-          </div>
+          </button>
+
         </form>
+
       </div>
+
     </div>
+
   );
+
 };
 
 const styles = {
-  container: {
-    minHeight: '100vh',
-    backgroundColor: '#f5f7fa',
-    padding: '2rem',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-  },
-  card: {
-    background: 'white',
-    borderRadius: '0.75rem',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-    border: '1px solid #e2e8f0',
-    padding: '2rem',
-    maxWidth: '800px',
-    width: '100%',
-    position: 'relative',
-  },
-  backButton: {
-    position: 'absolute',
-    top: '1.5rem',
-    left: '1.5rem',
-    background: 'none',
-    border: 'none',
-    color: '#5b3cc4',
-    cursor: 'pointer',
-    fontSize: '0.875rem',
-    fontWeight: '500',
-    padding: '0.25rem 0.5rem',
-    borderRadius: '0.375rem',
-    transition: 'background 0.2s',
-  },
-  title: {
-    fontSize: '1.5rem',
-    fontWeight: '600',
-    color: '#1e293b',
-    marginBottom: '2rem',
-    marginTop: '0.5rem',
-    textAlign: 'center',
-  },
-  form: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '1.25rem',
-  },
-  field: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.5rem',
-  },
-  row: {
-    display: 'flex',
-    gap: '1rem',
-  },
-  label: {
-    fontSize: '0.875rem',
-    fontWeight: '500',
-    color: '#475569',
-  },
-  input: {
-    padding: '0.625rem 0.75rem',
-    border: '1px solid #cbd5e1',
-    borderRadius: '0.5rem',
-    fontSize: '0.875rem',
-    transition: 'border-color 0.2s, box-shadow 0.2s',
-    outline: 'none',
-    fontFamily: 'inherit',
-  },
-  textarea: {
-    padding: '0.625rem 0.75rem',
-    border: '1px solid #cbd5e1',
-    borderRadius: '0.5rem',
-    fontSize: '0.875rem',
-    fontFamily: 'inherit',
-    resize: 'vertical',
-    outline: 'none',
-    transition: 'border-color 0.2s, box-shadow 0.2s',
-  },
-  inputDisabled: {
-    backgroundColor: '#f1f5f9',
-    color: '#64748b',
-    cursor: 'not-allowed',
-  },
-  inputError: {
-    borderColor: '#dc2626',
-  },
-  errorText: {
-    fontSize: '0.75rem',
-    color: '#dc2626',
-  },
-  hintText: {
-    fontSize: '0.75rem',
-    color: '#94a3b8',
-  },
-  actions: {
-    display: 'flex',
-    gap: '1rem',
-    marginTop: '1.5rem',
-  },
-  cancelButton: {
-    flex: 1,
-    padding: '0.625rem',
-    backgroundColor: '#f1f5f9',
-    color: '#475569',
-    border: '1px solid #e2e8f0',
-    borderRadius: '0.5rem',
-    fontSize: '0.875rem',
-    fontWeight: '500',
-    cursor: 'pointer',
-    transition: 'all 0.2s',
-  },
-  submitButton: {
-    flex: 1,
-    padding: '0.625rem',
-    backgroundColor: '#5b3cc4',
-    color: 'white',
-    border: 'none',
-    borderRadius: '0.5rem',
-    fontSize: '0.875rem',
-    fontWeight: '500',
-    cursor: 'pointer',
-    transition: 'background-color 0.2s',
-  },
-  disabledButton: {
-    backgroundColor: '#94a3b8',
-    cursor: 'not-allowed',
-  },
-  loadingCard: {
-    background: 'white',
-    borderRadius: '0.75rem',
-    padding: '3rem',
-    textAlign: 'center',
-    border: '1px solid #e2e8f0',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-  },
-  spinner: {
-    width: '2.5rem',
-    height: '2.5rem',
-    border: '3px solid #e2e8f0',
-    borderTopColor: '#5b3cc4',
-    borderRadius: '50%',
-    animation: 'spin 0.8s linear infinite',
-    margin: '0 auto 1rem',
-  },
-  loadingText: {
-    color: '#64748b',
-    fontSize: '0.875rem',
-  },
-};
 
-const styleSheet = document.createElement('style');
-styleSheet.textContent = `
-  @keyframes spin {
-    to { transform: rotate(360deg); }
+  container:{
+    minHeight:'100vh',
+    display:'flex',
+    justifyContent:'center',
+    alignItems:'center',
+    background:'#f3f4f6',
+    padding:'20px'
+  },
+
+  card:{
+    width:'100%',
+    maxWidth:'500px',
+    background:'white',
+    padding:'30px',
+    borderRadius:'20px',
+    boxShadow:
+      '0 8px 30px rgba(0,0,0,.08)'
+  },
+
+  title:{
+    marginBottom:'20px'
+  },
+
+  form:{
+    display:'flex',
+    flexDirection:'column',
+    gap:'15px'
+  },
+
+  input:{
+    padding:'14px',
+    borderRadius:'12px',
+    border:'1px solid #ddd',
+    fontSize:'1rem'
+  },
+
+  textarea:{
+    padding:'14px',
+    borderRadius:'12px',
+    border:'1px solid #ddd',
+    minHeight:'100px'
+  },
+
+  submit:{
+    padding:'15px',
+    border:'none',
+    borderRadius:'12px',
+    background:'#5b3cc4',
+    color:'white',
+    fontWeight:'bold',
+    cursor:'pointer'
+  },
+
+  backButton:{
+    marginBottom:'20px',
+    border:'none',
+    background:'transparent',
+    cursor:'pointer'
+  },
+
+  preview:{
+    width:'100%',
+    height:'250px',
+    objectFit:'cover',
+    borderRadius:'15px'
+  },
+
+  loading:{
+    padding:'50px',
+    textAlign:'center'
   }
-  
-  input:focus, textarea:focus {
-    border-color: #5b3cc4;
-    box-shadow: 0 0 0 3px rgba(91, 60, 196, 0.1);
-  }
-  
-  button:hover {
-    transform: translateY(-1px);
-  }
-  
-  button:active {
-    transform: translateY(0);
-  }
-  
-  .cancelButton:hover {
-    background-color: #e2e8f0;
-  }
-  
-  .submitButton:hover {
-    background-color: #4a2db8;
-  }
-`;
-document.head.appendChild(styleSheet);
+
+};
 
 export default ProductForm;
