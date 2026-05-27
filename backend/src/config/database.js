@@ -1,16 +1,24 @@
 // src/config/database.js
+
 require('dotenv').config();
+
 const { Sequelize } = require('sequelize');
 
 const sequelize = new Sequelize(
-  process.env.DB_NAME || 'inventory_db',
-  process.env.DB_USER || 'postgres',
-  process.env.DB_PASSWORD || '12345',
+  process.env.DATABASE_URL,
   {
-    host: process.env.DB_HOST || 'localhost',
-    port: process.env.DB_PORT || 5433,
     dialect: 'postgres',
+    protocol: 'postgres',
+
+    dialectOptions: {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false
+      }
+    },
+
     logging: false,
+
     pool: {
       max: 5,
       min: 0,
