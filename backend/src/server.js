@@ -1,33 +1,25 @@
-// src/server.js
 const app = require('./app');
+
 const sequelize = require('./config/database');
 
 const PORT = process.env.PORT || 3000;
 
-const startServer = async () => {
-  try {
-    await sequelize.authenticate();
-    console.log('✓ Conexión a PostgreSQL exitosa');
+sequelize.sync({ alter: true })
+  .then(() => {
 
-    // Sincronizar modelos (crear tablas automáticamente)
-    await sequelize.sync({ alter: true });
-    console.log('✓ Modelos sincronizados con la base de datos');
-
-    sequelize.sync({ alter: true })
-      .then(() => {
-        console.log('Base de datos sincronizada');
-      })
-      .catch((error) => {
-        console.log(error);
-      });
+    console.log('Base de datos sincronizada');
 
     app.listen(PORT, () => {
-      console.log(`✓ Servidor corriendo en http://localhost:${PORT}`);
-    });
-  } catch (error) {
-    console.error('✗ Error al iniciar servidor:', error);
-    process.exit(1);
-  }
-};
 
-startServer();
+      console.log(
+        `Servidor corriendo en puerto ${PORT}`
+      );
+
+    });
+
+  })
+  .catch((error) => {
+
+    console.log(error);
+
+  });
