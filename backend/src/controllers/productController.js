@@ -1,17 +1,26 @@
 // src/controllers/productController.js
+
 const Product = require('../models/Product');
 const { Op } = require('sequelize');
 
 const createProduct = async (req, res) => {
   try {
-    const { sku, name, description, price, stock } = req.body;
+    const {
+      sku,
+      name,
+      description,
+      price,
+      stock,
+      imageUrl
+    } = req.body;
 
     const product = await Product.create({
       sku,
       name,
       description,
       price,
-      stock
+      stock,
+      imageUrl
     });
 
     return res.status(201).json({
@@ -23,10 +32,13 @@ const createProduct = async (req, res) => {
         description: product.description,
         price: product.price,
         stock: product.stock,
+        imageUrl: product.imageUrl,
         disponibilidad: product.disponibilidad
       }
     });
+
   } catch (error) {
+
     if (error.name === 'SequelizeUniqueConstraintError') {
       return res.status(409).json({
         success: false,
@@ -43,18 +55,30 @@ const createProduct = async (req, res) => {
 };
 
 const getAllProducts = async (req, res) => {
+
   try {
+
     const { search } = req.query;
-    
+
     let whereClause = {};
-    
+
     if (search) {
+
       whereClause = {
         [Op.or]: [
-          { name: { [Op.iLike]: `%${search}%` } },
-          { sku: { [Op.iLike]: `%${search}%` } }
+          {
+            name: {
+              [Op.like]: `%${search}%`
+            }
+          },
+          {
+            sku: {
+              [Op.like]: `%${search}%`
+            }
+          }
         ]
       };
+
     }
 
     const products = await Product.findAll({
@@ -68,6 +92,7 @@ const getAllProducts = async (req, res) => {
       description: product.description,
       price: product.price,
       stock: product.stock,
+      imageUrl: product.imageUrl,
       disponibilidad: product.disponibilidad,
       createdAt: product.createdAt,
       updatedAt: product.updatedAt
@@ -78,26 +103,33 @@ const getAllProducts = async (req, res) => {
       data: productsWithAvailability,
       count: productsWithAvailability.length
     });
+
   } catch (error) {
+
     return res.status(500).json({
       success: false,
       message: 'Error al obtener productos',
       error: error.message
     });
+
   }
 };
 
 const getProductBySku = async (req, res) => {
+
   try {
+
     const { sku } = req.params;
 
     const product = await Product.findByPk(sku);
 
     if (!product) {
+
       return res.status(404).json({
         success: false,
         message: 'Producto no encontrado'
       });
+
     }
 
     return res.status(200).json({
@@ -108,40 +140,64 @@ const getProductBySku = async (req, res) => {
         description: product.description,
         price: product.price,
         stock: product.stock,
+        imageUrl: product.imageUrl,
         disponibilidad: product.disponibilidad,
         createdAt: product.createdAt,
         updatedAt: product.updatedAt
       }
     });
+
   } catch (error) {
+
     return res.status(500).json({
       success: false,
       message: 'Error al obtener el producto',
       error: error.message
     });
+
   }
 };
 
 const updateProduct = async (req, res) => {
+
   try {
+
     const { sku } = req.params;
-    const { name, description, price } = req.body;
+
+    const {
+      name,
+      description,
+      price,
+      imageUrl
+    } = req.body;
 
     const product = await Product.findByPk(sku);
 
     if (!product) {
+
       return res.status(404).json({
         success: false,
         message: 'Producto no encontrado'
       });
+
     }
 
     const updateData = {};
-    if (name !== undefined) updateData.name = name;
-    if (description !== undefined) updateData.description = description;
-    if (price !== undefined) updateData.price = price;
+
+    if (name !== undefined)
+      updateData.name = name;
+
+    if (description !== undefined)
+      updateData.description = description;
+
+    if (price !== undefined)
+      updateData.price = price;
+
+    if (imageUrl !== undefined)
+      updateData.imageUrl = imageUrl;
 
     await product.update(updateData);
+
     await product.reload();
 
     return res.status(200).json({
@@ -153,29 +209,37 @@ const updateProduct = async (req, res) => {
         description: product.description,
         price: product.price,
         stock: product.stock,
+        imageUrl: product.imageUrl,
         disponibilidad: product.disponibilidad
       }
     });
+
   } catch (error) {
+
     return res.status(500).json({
       success: false,
       message: 'Error al actualizar el producto',
       error: error.message
     });
+
   }
 };
 
 const deleteProduct = async (req, res) => {
+
   try {
+
     const { sku } = req.params;
 
     const product = await Product.findByPk(sku);
 
     if (!product) {
+
       return res.status(404).json({
         success: false,
         message: 'Producto no encontrado'
       });
+
     }
 
     await product.destroy();
@@ -187,30 +251,39 @@ const deleteProduct = async (req, res) => {
         sku: product.sku
       }
     });
+
   } catch (error) {
+
     return res.status(500).json({
       success: false,
       message: 'Error al eliminar el producto',
       error: error.message
     });
+
   }
 };
 
 const updateStock = async (req, res) => {
+
   try {
+
     const { sku } = req.params;
+
     const { stock } = req.body;
 
     const product = await Product.findByPk(sku);
 
     if (!product) {
+
       return res.status(404).json({
         success: false,
         message: 'Producto no encontrado'
       });
+
     }
 
     await product.update({ stock });
+
     await product.reload();
 
     return res.status(200).json({
@@ -220,15 +293,19 @@ const updateStock = async (req, res) => {
         sku: product.sku,
         name: product.name,
         stock: product.stock,
+        imageUrl: product.imageUrl,
         disponibilidad: product.disponibilidad
       }
     });
+
   } catch (error) {
+
     return res.status(500).json({
       success: false,
       message: 'Error al actualizar el stock',
       error: error.message
     });
+
   }
 };
 

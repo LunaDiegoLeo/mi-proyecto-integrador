@@ -31,6 +31,10 @@ const Product = sequelize.define('Product', {
       min: 0
     }
   },
+  imageUrl: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
   disponibilidad: {
     type: DataTypes.VIRTUAL,
     get() {
